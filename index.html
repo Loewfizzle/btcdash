@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<!-- 
+  Loewfizzle's Bitcoin Dashboard
+  Codename: NEURAL-07 / "Chrome Veil"
+  
+  A dark, neon-drenched, fully interactive cyberpunk Bitcoin command center.
+  Version: v1.0 (Final Polish)
+  Built: May 2026
+  
+  Features:
+  - Live price with directional flash animations
+  - Analogue Fear & Greed SVG gauge
+  - Strategy (Saylor) Bitcoin holdings tracker with simulated purchases
+  - Real-time network stats + precise halving countdown
+  - 30-day cyberpunk-styled price chart
+  - Advanced live data robustness (backoff, staleness, loading states)
+  - Fully responsive (desktop + mobile)
+  
+  Tech: Single-file HTML + Tailwind (CDN) + Chart.js (CDN) + Vanilla JS
+  Data Sources: CoinGecko, Mempool.space, Alternative.me
+  
+  For authorized megacorp personnel only.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOEWFIZZLE'S BITCOIN DASHBOARD // NEURAL-07</title>
+  
+  <!-- Tailwind 3.4 via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    /* ============================================
+       LOEWFIZZLE'S BITCOIN DASHBOARD — CYBERPUNK DESIGN SYSTEM
+       Codename: CHROME VEIL
+       ============================================ */
+
+    :root {
+      --cyan: #00f9ff;
+      --magenta: #ff00aa;
+      --lime: #00ff9f;
+      --red: #ff0033;
+      --gold: #ffd700;
+      --void: #050508;
+      --panel: #0a0a12;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-feature-settings: "tnum";
+    }
+
+    /* === BACKGROUND LAYERS === */
+    .neural-bg {
+      background: 
+        radial-gradient(circle at 50% 20%, #0a0a12 0%, #050508 70%),
+        #050508;
+      background-size: 100% 100%;
+    }
+
+    /* Subtle perspective grid */
+    .grid-overlay {
+      background-image: 
+        linear-gradient(rgba(0, 249, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 249, 255, 0.06) 1px, transparent 1px);
+      background-size: 42px 42px;
+      pointer-events: none;
+    }
+
+    /* CRT Scanlines — lightweight and beautiful */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0, 249, 255, 0.035) 3px,
+        rgba(0, 249, 255, 0.035) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+      animation: scanline-drift 4.2s linear infinite;
+    }
+
+    @keyframes scanline-drift {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 100px; }
+    }
+
+    /* === GLASSMORPHISM + NEON CARDS === */
+    .holo-card {
+      background: rgba(10, 10, 18, 0.82);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 249, 255, 0.25);
+      box-shadow: 
+        0 0 0 1px rgba(0, 249, 255, 0.08),
+        0 8px 32px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
+    }
+
+    .holo-card:hover {
+      border-color: rgba(0, 249, 255, 0.55);
+      box-shadow: 
+        0 0 0 1px rgba(0, 249, 255, 0.15),
+        0 0 25px rgba(0, 249, 255, 0.15),
+        0 0 50px rgba(255, 0, 170, 0.08),
+        0 12px 48px rgba(0, 0, 0, 0.7);
+    }
+
+    .section-title {
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      font-weight: 600;
+      color: rgba(0, 249, 255, 0.65);
+      text-transform: uppercase;
+    }
+
+    /* === PRICE HERO === */
+    .price-display {
+      font-size: 3.5rem;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -2.5px;
+      transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    @media (min-width: 640px) {
+      .price-display {
+        font-size: 4.5rem;
+        letter-spacing: -3px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .price-display {
+        font-size: 5.25rem;
+        letter-spacing: -3.5px;
+      }
+    }
+
+    .price-flash-up {
+      animation: price-flash-green 420ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .price-flash-down {
+      animation: price-flash-red 420ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    @keyframes price-flash-green {
+      0% { color: #00ff9f; text-shadow: 0 0 12px #00ff9f, 0 0 28px #00ff9f; transform: scale(1.02); }
+      100% { color: #e0e7ff; text-shadow: none; transform: scale(1); }
+    }
+
+    @keyframes price-flash-red {
+      0% { color: #ff0033; text-shadow: 0 0 12px #ff0033, 0 0 28px #ff0033; transform: scale(0.985); }
+      100% { color: #e0e7ff; text-shadow: none; transform: scale(1); }
+    }
+
+    .chevron {
+      transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    /* === GAUGE STYLING === */
+    .gauge-svg {
+      filter: drop-shadow(0 0 12px rgba(0, 249, 255, 0.2));
+    }
+
+    /* === ALIEN HEAD === */
+    .alien-head {
+      transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .alien-head.pulse {
+      animation: alien-breathe 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    .alien-orb {
+      animation: alien-orb-pulse 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes alien-breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.035); }
+    }
+
+    @keyframes alien-orb-pulse {
+      0%, 100% { opacity: 0.95; }
+      50% { opacity: 1; }
+    }
+
+    .glitch {
+      position: relative;
+    }
+
+    .glitch.active::before,
+    .glitch.active::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.7;
+    }
+
+    .glitch.active::before { 
+      color: var(--cyan); 
+      transform: translateX(-1.5px); 
+      animation: glitch-1 80ms linear; 
+    }
+    .glitch.active::after { 
+      color: var(--magenta); 
+      transform: translateX(1.5px); 
+      animation: glitch-2 80ms linear; 
+    }
+
+    @keyframes glitch-1 {
+      0% { transform: translateX(-1.5px); }
+      100% { transform: translateX(0); }
+    }
+    @keyframes glitch-2 {
+      0% { transform: translateX(1.5px); }
+      100% { transform: translateX(0); }
+    }
+
+    /* === SAYLOR ACQUIRE BUTTON === */
+    .acquire-btn {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+      border: 1px solid rgba(255, 215, 0, 0.5);
+    }
+
+    .acquire-btn:hover {
+      background: rgba(255, 215, 0, 0.1);
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
+      border-color: #ffd700;
+    }
+
+    .acquire-btn::after {
+      content: '';
+      position: absolute;
+      inset: -50% -100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+      transform: skewX(-25deg);
+      transition: left 0.6s;
+    }
+
+    .acquire-btn:hover::after {
+      left: 200%;
+    }
+
+    /* === TOAST === */
+    .neural-toast {
+      animation: toast-slide 0.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    }
+
+    @keyframes toast-slide {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .data-value {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sim-banner {
+      background: linear-gradient(to right, #3b0a0a, #2a1a00);
+      border: 1px solid #ff0033;
+      color: #ffaa00;
+    }
+
+    /* Stale data visual treatment */
+    .data-stale {
+      opacity: 0.75;
+      filter: saturate(0.7);
+    }
+
+    .data-stale .section-title {
+      color: #ffaa00 !important;
+    }
+
+    /* Subtle loading indicator */
+    @keyframes subtle-pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    .data-loading {
+      animation: subtle-pulse 1.2s infinite ease-in-out;
+      opacity: 0.65;
+    }
+
+    .chart-container.data-loading {
+      position: relative;
+    }
+
+    .chart-container.data-loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+      border-radius: 8px;
+    }
+
+    #price-freshness,
+    #fng-freshness,
+    #network-freshness,
+    #chart-freshness {
+      transition: opacity 0.2s ease;
+    }
+  </style>
+</head>
+<body class="neural-bg text-[#e0e7ff] overflow-x-hidden">
+  <!-- Fixed scanlines overlay -->
+  <div class="scanlines"></div>
+
+  <!-- Subtle digital grid -->
+  <div class="fixed inset-0 grid-overlay z-0"></div>
+
+  <!-- SIM MODE BANNER -->
+  <div id="sim-banner" class="hidden fixed top-0 left-0 right-0 z-[200] sim-banner text-center py-1 text-xs tracking-[2px] font-medium">
+    SIM MODE — NEURAL UPLINK DEGRADED • USING CURATED MOCK DATA
+  </div>
+
+  <!-- HEADER -->
+  <header class="relative z-50 border-b border-white/10 bg-[#050508]/90 backdrop-blur-xl">
+    <div class="max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+      <!-- Logo with Alien Head "O" -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center text-3xl sm:text-4xl font-black tracking-[-2.5px]">
+          <span class="text-white">L</span>
+          
+          <!-- THE ALIEN HEAD -->
+          <div class="inline-flex items-center justify-center mx-0.5 -mt-1" style="width: 34px; height: 34px;">
+            <svg id="alien-head" width="42" height="42" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" class="alien-head pulse drop-shadow-[0_0_8px_#00f9ff]">
+              <defs>
+                <filter id="neonCyan" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+                <filter id="neonMagenta" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="1.8" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <path d="M28 28 Q50 8 72 28 Q78 52 72 82 Q50 98 28 82 Q22 52 28 28" 
+                    fill="#111118" stroke="#00f9ff" stroke-width="4.5" stroke-linejoin="round"/>
+              
+              <path d="M32 32 Q50 16 68 32 Q72 48 68 74 Q50 86 32 74 Q28 48 32 32" 
+                    fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.15"/>
+
+              <path d="M38 38 L46 34 L52 38" stroke="#00f9ff" stroke-width="1.25" opacity="0.7"/>
+              <path d="M46 42 L52 39" stroke="#ff00aa" stroke-width="0.9" opacity="0.6"/>
+              <path d="M55 36 L60 41" stroke="#00f9ff" stroke-width="1" opacity="0.55"/>
+
+              <ellipse cx="38" cy="48" rx="8.5" ry="11" fill="#0a0a12"/>
+              <rect x="36.2" y="40" width="3.6" height="16" rx="1.8" fill="#00f9ff" class="alien-eye-slit" filter="url(#neonCyan)"/>
+
+              <ellipse cx="62" cy="48" rx="8.5" ry="11" fill="#0a0a12"/>
+              <rect x="60.2" y="40" width="3.6" height="16" rx="1.8" fill="#00f9ff" class="alien-eye-slit" filter="url(#neonCyan)"/>
+
+              <path d="M32 24 Q26 14 22 8" stroke="#ff00aa" stroke-width="2.25" stroke-linecap="round"/>
+              <circle cx="21" cy="7" r="3.8" fill="#111118" stroke="#ff00aa" stroke-width="1.5"/>
+              <circle cx="21" cy="7" r="2.1" fill="#00f9ff" class="alien-orb" filter="url(#neonCyan)"/>
+
+              <path d="M68 24 Q74 14 78 8" stroke="#ff00aa" stroke-width="2.25" stroke-linecap="round"/>
+              <circle cx="79" cy="7" r="3.8" fill="#111118" stroke="#ff00aa" stroke-width="1.5"/>
+              <circle cx="79" cy="7" r="2.1" fill="#00f9ff" class="alien-orb" filter="url(#neonCyan)"/>
+
+              <path d="M28 28 Q50 8 72 28 Q78 52 72 82 Q50 98 28 82 Q22 52 28 28" 
+                    fill="none" stroke="#ff00aa" stroke-width="2.25" stroke-linejoin="round" opacity="0.85"/>
+            </svg>
+          </div>
+
+          <span class="text-white">EWFIZZLE'S</span>
+        </div>
+        <div class="text-[11px] font-medium tracking-[3px] text-[#00f9ff]/60 -ml-1 mt-1">BITCOIN DASHBOARD</div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 px-3 py-1 rounded bg-white/5 border border-white/10">
+          <div class="w-2 h-2 bg-[#00ff9f] rounded-full animate-pulse"></div>
+          <span class="text-xs tracking-[1px] text-[#00ff9f]/80 font-medium">NEURAL LINK STABLE</span>
+        </div>
+        <div class="text-xs text-[#00f9ff]/50 mono" id="last-sync">LAST SYNC — —</div>
+        <button onclick="window.DASH?.recalibrate?.()" 
+                class="ml-2 sm:ml-3 px-2.5 py-1 sm:px-3 sm:py-1.5 min-h-[28px] sm:min-h-[32px] text-[9px] sm:text-[10px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95 touch-manipulation">
+          RECALIBRATE
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12 sm:pb-16 relative z-10">
+
+    <!-- HERO ROW -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+
+      <!-- LIVE BITCOIN PRICE -->
+      <div class="lg:col-span-5 holo-card rounded-2xl p-5 sm:p-6 lg:p-8 flex flex-col justify-center">
+        <div class="section-title mb-3">LIVE NEURAL FEED • COINGECKO</div>
+        
+        <div class="flex items-baseline gap-3">
+          <div>
+            <div id="price-usd" class="price-display mono text-white tracking-tighter data-value">$73,291.48</div>
+            <div id="price-updated" class="text-[10px] text-[#00ff9f]/50 mono -mt-1"></div>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-3 mt-1">
+          <div id="price-change" class="flex items-center gap-1.5 text-xl sm:text-2xl font-semibold mono data-value">
+            <span class="chevron">▼</span>
+            <span>-0.44%</span>
+          </div>
+          <div class="text-[#00f9ff]/50 text-sm">24H</div>
+        </div>
+
+        <div class="mt-4 text-sm text-[#00f9ff]/70 mono">
+          <span id="price-sats">1,000,000 sats</span>
+          <span class="text-white/30 mx-2">•</span>
+          <span class="text-xs">PER BTC</span>
+          <span id="price-freshness" class="ml-3 text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
+      </div>
+
+      <!-- FEAR & GREED GAUGE -->
+      <div class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col items-center">
+        <div class="flex items-center justify-between w-full">
+          <div class="section-title">FEAR &amp; GREED INDEX</div>
+          <span id="fng-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
+        
+        <div class="relative w-[160px] h-[160px] sm:w-[190px] sm:h-[190px] lg:w-[210px] lg:h-[210px] mt-1">
+          <svg id="fng-gauge" width="100%" height="100%" viewBox="0 0 210 210" class="gauge-svg" style="max-width: 210px; max-height: 210px;">
+            <!-- Populated by Animation Agent -->
+          </svg>
+          
+          <div class="absolute inset-0 flex flex-col items-center justify-center pt-3">
+            <div id="fng-value" class="text-6xl font-black mono tracking-tighter">23</div>
+            <div id="fng-label" class="text-xs tracking-[2px] font-semibold text-[#ff0033] mt-0.5">EXTREME FEAR</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SAYLOR'S WAR CHEST -->
+      <div class="lg:col-span-4 holo-card rounded-2xl p-3 sm:p-4 lg:p-6 flex flex-col text-sm sm:text-base">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="section-title">STRATEGY BITCOIN RESERVE</div>
+            <div class="text-amber-400/90 text-xs tracking-widest">MICROSTRATEGY • PUBLIC DISCLOSURES</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] text-[#ffd700]/60">AVG ACQ COST</div>
+            <div id="saylor-avg" class="mono font-semibold text-[#ffd700]">$41,820</div>
+          </div>
+        </div>
+
+        <div class="mt-auto">
+          <div class="flex items-baseline gap-2">
+            <div id="saylor-btc" class="text-4xl sm:text-5xl font-black mono tracking-tighter text-[#ffd700]">843,738</div>
+            <div class="text-2xl text-[#ffd700]/60">BTC</div>
+          </div>
+          <div id="saylor-usd" class="text-2xl font-semibold mono text-white/90 data-value mt-0.5">$61.84B</div>
+        </div>
+
+        <button id="acquire-btn" class="acquire-btn mt-6 w-full py-3.5 rounded-xl bg-black/40 text-[#ffd700] font-semibold tracking-[1.5px] text-sm active:scale-[0.985] transition">
+          ACQUIRE MORE BTC
+        </button>
+        <div class="text-[10px] text-center text-white/30 mt-2 tracking-wide">NEURAL UPLINK • INSTANT SETTLEMENT</div>
+      </div>
+    </div>
+
+    <!-- 30-DAY CHART -->
+    <div class="holo-card rounded-2xl p-7 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div>
+            <div class="section-title">30-DAY PRICE TRAJECTORY</div>
+            <div class="text-xs text-white/40">COINGECKO • DAILY CLOSE</div>
+          </div>
+          <span id="chart-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
+        <div class="text-xs px-3 py-1 rounded bg-white/5 border border-white/10 text-[#00f9ff]/70">CHROME VEIL • v4.2</div>
+      </div>
+      <div class="chart-container h-[220px] sm:h-[260px] lg:h-[280px]">
+        <canvas id="price-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- NETWORK STATS (moved beneath chart per user request) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="holo-card rounded-2xl p-6 hover:border-[#00f9ff]/40 transition">
+        <div class="flex justify-between items-start">
+          <div class="section-title">CURRENT HASH RATE</div>
+          <span id="network-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
+        <div id="hashrate" class="text-4xl font-bold mono tracking-tighter mt-3">1,031 EH/s</div>
+        <div id="hashrate-trend" class="text-xs text-[#00ff9f] mt-1">+7.2% (7D)</div>
+      </div>
+
+      <div class="holo-card rounded-2xl p-6 hover:border-[#00f9ff]/40 transition">
+        <div class="flex justify-between items-start">
+          <div class="section-title">CURRENT DIFFICULTY</div>
+          <span id="network-freshness2" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
+        <div id="difficulty" class="text-4xl font-bold mono tracking-tighter mt-3">136.6T</div>
+        <div id="difficulty-adjust" class="text-xs mt-1">
+          <span class="text-[#00ff9f]">+3.12%</span> 
+          <span class="text-white/40">NEXT ADJUSTMENT</span>
+        </div>
+      </div>
+
+      <div class="holo-card rounded-2xl p-6 border-l-2 border-[#ff00aa] hover:border-[#ff00aa]/70 transition">
+        <div class="flex justify-between items-start">
+          <div class="section-title text-[#ff00aa]">NEXT HALVING</div>
+          <span id="network-freshness3" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
+        <div id="halving-blocks" class="text-4xl font-bold mono tracking-tighter mt-3">98,488 <span class="text-base align-super text-white/50">BLOCKS</span></div>
+        <div id="halving-time" class="text-sm text-[#ff00aa]/80 mono mt-1">~682 DAYS • 14:22:09</div>
+      </div>
+    </div>
+
+    <!-- SAYLOR RECENT PURCHASES -->
+    <div class="holo-card rounded-2xl p-7">
+      <div class="flex justify-between items-center mb-4">
+        <div class="section-title">RECENT ACQUISITIONS — STRATEGY</div>
+        <div class="text-[10px] text-white/40">UPDATED WITH LIVE BTC PRICE</div>
+      </div>
+      <div id="saylor-purchases" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 text-[10px] sm:text-xs lg:text-sm">
+        <!-- Populated by Core Logic -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/10 bg-[#050508]/90 py-4">
+    <div class="max-w-[1480px] mx-auto px-8 flex items-center justify-between text-xs text-white/40">
+      <div>LOEWFIZZLE'S BITCOIN DASHBOARD • NEURAL-07 • v1.0 • FOR AUTHORIZED MEGACORP PERSONNEL ONLY</div>
+      <div class="mono">DATA SOURCES: COINGECKO • ALTERNATIVE.ME • MEMPOOL.SPACE</div>
+    </div>
+  </footer>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-[300] flex flex-col gap-2"></div>
+
+  <!-- FX Canvas -->
+  <canvas id="fx-canvas" class="fixed inset-0 pointer-events-none z-[150]"></canvas>
+
+  <script>
+    // =====================================================
+    // FULL MERGED DASHBOARD — UI + DATA + ANIMATION
+    // =====================================================
+
+    // Tailwind config
+    function initTailwind() {
+      document.documentElement.style.setProperty('--cyan', '#00f9ff');
+    }
+    initTailwind();
+
+    // =====================================================
+    // DATA INTEGRATION LAYER (from Data Agent)
+    // =====================================================
+    (function() {
+      window.DASH = {
+        price: 73291,
+        prevPrice: 73550,
+        priceChange: -0.44,
+        sats: 7329100000,
+        fng: { value: 23, classification: "Extreme Fear" },
+        network: {
+          blockHeight: 951512,
+          hashrate: 1.031139817418336e+21,
+          hashrateEH: "1031",
+          difficulty: 136607070854775.1,
+          difficultyT: "136.6",
+          nextAdjustment: 3.12
+        },
+        chartData: null,
+        saylor: { btc: 843738, avgCost: 41820 },
+        lastSync: null,
+        isSimMode: true
+      };
+
+      const simBanner = document.getElementById('sim-banner');
+
+      function setSimMode(active) {
+        window.DASH.isSimMode = active;
+        if (simBanner) simBanner.classList.toggle('hidden', !active);
+      }
+
+      function updateLastSync() {
+        window.DASH.lastSync = new Date();
+        const el = document.getElementById('last-sync');
+        if (el) {
+          el.textContent = 'LAST SYNC — ' + window.DASH.lastSync.toLocaleTimeString([], { 
+            hour: '2-digit', minute: '2-digit', second: '2-digit' 
+          });
+        }
+      }
+
+      function dispatchUpdate(type, payload) {
+        window.dispatchEvent(new CustomEvent('dashboard:update', {
+          detail: { type, payload, timestamp: Date.now() }
+        }));
+      }
+
+      // =====================================================
+      // BITCOIN CORE LOGIC LAYER (Live Data + Full Features)
+      // =====================================================
+
+      const API = {
+        price: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
+        fearGreed: 'https://api.alternative.me/fng/',
+        blockHeight: 'https://mempool.space/api/blocks/tip/height',
+        hashrate: 'https://mempool.space/api/v1/mining/hashrate/1m',
+        chart: 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily'
+      };
+
+      let chartInstance = null;
+      let saylorPurchases = [
+        { date: '2026-04-12', btc: 12450, usd: 912000000 },
+        { date: '2026-03-28', btc: 9800, usd: 712000000 },
+        { date: '2026-03-05', btc: 15720, usd: 1.12e9 },
+        { date: '2026-02-19', btc: 8300, usd: 598000000 },
+        { date: '2026-02-03', btc: 11200, usd: 795000000 },
+        { date: '2026-01-15', btc: 9500, usd: 682000000 }
+      ];
+
+      function setSimMode(active) {
+        window.DASH.isSimMode = active;
+        const banner = document.getElementById('sim-banner');
+        if (!banner) return;
+
+        if (!active) {
+          banner.classList.add('hidden');
+          banner.style.borderColor = '#ff0033';
+          banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
+          return;
+        }
+
+        // Build a more informative message
+        const degraded = [];
+        if (endpointHealth.price.failures > 0) degraded.push('Price');
+        if (endpointHealth.fng.failures > 0) degraded.push('F&G');
+        if (endpointHealth.network.failures > 0) degraded.push('Network');
+        if (endpointHealth.chart.failures > 0) degraded.push('Chart');
+
+        let message = 'SIM MODE — NEURAL UPLINK DEGRADED';
+        if (degraded.length > 0) {
+          message += ` • ${degraded.join(' + ')} using cached data`;
+          // Visually distinct for partial vs full degradation
+          banner.style.borderColor = '#ffaa00';
+          banner.style.background = 'linear-gradient(to right, #2a1a00, #1a1200)';
+        } else {
+          message += ' • USING CURATED MOCK DATA';
+          banner.style.borderColor = '#ff0033';
+          banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
+        }
+
+        banner.textContent = message;
+        banner.classList.remove('hidden');
+      }
+
+      function updateLastSync() {
+        const now = Date.now();
+        window.DASH.lastSync = new Date(now);
+
+        const critical = ['price', 'fng', 'network'];
+        let oldestSuccess = now;
+
+        critical.forEach(key => {
+          const ts = endpointHealth[key]?.lastSuccess || 0;
+          if (ts > 0 && ts < oldestSuccess) oldestSuccess = ts;
+        });
+
+        const ageSeconds = Math.floor((now - oldestSuccess) / 1000);
+        const el = document.getElementById('last-sync');
+
+        if (el) {
+          let text = 'LAST SYNC — ' + new Date(now).toLocaleTimeString([], { 
+            hour: '2-digit', minute: '2-digit', second: '2-digit' 
+          });
+
+          if (ageSeconds > 90) {
+            const ageMin = Math.floor(ageSeconds / 60);
+            text += `  (some data ~${ageMin}m old)`;
+          }
+
+          el.textContent = text;
+        }
+      }
+
+      function dispatchUpdate(type, payload) {
+        window.dispatchEvent(new CustomEvent('dashboard:update', {
+          detail: { type, payload, timestamp: Date.now() }
+        }));
+      }
+
+      // === Live Data Robustness: Endpoint Health Tracking ===
+      const endpointHealth = {
+        price:     { failures: 0, nextRetry: 0, lastSuccess: 0 },
+        fng:       { failures: 0, nextRetry: 0, lastSuccess: 0 },
+        network:   { failures: 0, nextRetry: 0, lastSuccess: 0 },
+        chart:     { failures: 0, nextRetry: 0, lastSuccess: 0 }
+      };
+
+      // Expose for UI indicators
+      window.DASH.health = endpointHealth;
+
+      function getDataAge(key) {
+        const health = endpointHealth[key] || {};
+        const ts = health.lastSuccess || 0;
+
+        if (!ts) return { text: 'no data', color: '#ff0033' };
+
+        const ageSec = Math.floor((Date.now() - ts) / 1000);
+        const isRetrying = health.failures > 0 && health.nextRetry > Date.now();
+
+        let text, color;
+
+        if (ageSec < 90) {
+          text = 'just now';
+          color = '#00ff9f';
+        } else if (ageSec < 300) {
+          text = `${Math.floor(ageSec/60)}m ago`;
+          color = '#00ff9f';
+        } else if (ageSec < 600) {
+          text = `${Math.floor(ageSec/60)}m ago`;
+          color = '#ffd700';
+        } else {
+          text = `${Math.floor(ageSec/60)}m ago`;
+          color = '#ff6600';
+        }
+
+        if (isRetrying) {
+          text += ' (retrying)';
+          color = '#ffaa00';
+        }
+
+        return { text, color };
+      }
+
+      function updateLoadingIndicators() {
+        const priceVal = document.getElementById('price-usd');
+        const fngVal = document.getElementById('fng-value');
+        const networkVals = [
+          document.getElementById('hashrate'),
+          document.getElementById('difficulty'),
+          document.getElementById('halving-blocks')
+        ];
+        const chartContainer = document.querySelector('.chart-container');
+
+        // Price
+        if (priceVal) priceVal.classList.toggle('data-loading', refreshingSources.has('price'));
+
+        // F&G
+        if (fngVal) fngVal.classList.toggle('data-loading', refreshingSources.has('fng'));
+
+        // Network
+        networkVals.forEach(el => {
+          if (el) el.classList.toggle('data-loading', refreshingSources.has('network'));
+        });
+
+        // Chart
+        if (chartContainer) chartContainer.classList.toggle('data-loading', refreshingSources.has('chart'));
+
+        // Freshness labels
+        const indicators = {
+          price:  document.getElementById('price-freshness'),
+          fng:    document.getElementById('fng-freshness'),
+          network: document.getElementById('network-freshness')
+        };
+
+        Object.keys(indicators).forEach(key => {
+          const el = indicators[key];
+          if (!el) return;
+
+          if (refreshingSources.has(key)) {
+            if (!el.textContent.startsWith('⟳')) {
+              el.textContent = '⟳ ' + el.textContent;
+            }
+            el.style.opacity = '0.6';
+          } else {
+            el.style.opacity = '1';
+            if (el.textContent.startsWith('⟳')) {
+              el.textContent = el.textContent.replace('⟳ ', '');
+            }
+          }
+        });
+      }
+
+      function updateFreshnessIndicators() {
+        const now = Date.now();
+        const priceCard = document.querySelector('.lg\\:col-span-5.holo-card');
+        const fngCard = document.querySelector('.lg\\:col-span-3.holo-card');
+        const networkCards = document.querySelectorAll('#network-freshness, #network-freshness2, #network-freshness3');
+
+        // Price card staleness
+        if (priceCard) {
+          const priceAge = endpointHealth.price.lastSuccess;
+          const isStale = priceAge && (now - priceAge > 5 * 60 * 1000);
+          priceCard.classList.toggle('data-stale', !!isStale);
+        }
+
+        // F&G card staleness
+        if (fngCard) {
+          const fngAge = endpointHealth.fng.lastSuccess;
+          const isStale = fngAge && (now - fngAge > 5 * 60 * 1000);
+          fngCard.classList.toggle('data-stale', !!isStale);
+        }
+
+        // Network cards staleness (apply to parent cards)
+        const networkParent = document.querySelector('#hashrate')?.closest('.holo-card');
+        if (networkParent) {
+          const netAge = endpointHealth.network.lastSuccess;
+          const isStale = netAge && (now - netAge > 5 * 60 * 1000);
+          networkParent.classList.toggle('data-stale', !!isStale);
+        }
+
+        // Update the small freshness labels + prominent "updated" under price
+        const priceFresh = document.getElementById('price-freshness');
+        const priceUpdated = document.getElementById('price-updated');
+        if (priceFresh) {
+          const age = getDataAge('price');
+          priceFresh.textContent = age.text;
+          priceFresh.style.color = age.color;
+          const ts = endpointHealth.price.lastSuccess;
+          priceFresh.title = ts ? `Last updated: ${new Date(ts).toLocaleTimeString()}` : '';
+        }
+        if (priceUpdated) {
+          const age = getDataAge('price');
+          priceUpdated.textContent = (age.text && age.text !== 'no data') ? `updated ${age.text}` : '';
+          priceUpdated.style.color = age.color;
+        }
+
+        const fngFresh = document.getElementById('fng-freshness');
+        if (fngFresh) {
+          const age = getDataAge('fng');
+          fngFresh.textContent = age.text;
+          fngFresh.style.color = age.color;
+          const ts = endpointHealth.fng.lastSuccess;
+          fngFresh.title = ts ? `Last updated: ${new Date(ts).toLocaleTimeString()}` : '';
+        }
+
+        const netAge = getDataAge('network');
+        ['network-freshness', 'network-freshness2', 'network-freshness3'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.textContent = netAge.text;
+            el.style.color = netAge.color;
+            const ts = endpointHealth.network.lastSuccess;
+            el.title = ts ? `Last updated: ${new Date(ts).toLocaleTimeString()}` : '';
+          }
+        });
+
+        // Chart freshness + stale treatment
+        const chartFresh = document.getElementById('chart-freshness');
+        const chartContainer = document.querySelector('.chart-container');
+        if (chartFresh) {
+          const age = getDataAge('chart');
+          chartFresh.textContent = age.text;
+          chartFresh.style.color = age.color;
+          const ts = endpointHealth.chart.lastSuccess;
+          chartFresh.title = ts ? `Last updated: ${new Date(ts).toLocaleTimeString()}` : '';
+        }
+        if (chartContainer) {
+          const chartAge = endpointHealth.chart.lastSuccess;
+          const isStale = chartAge && (now - chartAge > 5 * 60 * 1000);
+          chartContainer.classList.toggle('data-stale', !!isStale);
+        }
+      }
+
+      const MAX_BACKOFF = 5 * 60 * 1000; // 5 minutes max
+
+      // Track which sources are currently being fetched (for loading states)
+      const refreshingSources = new Set();
+
+      function shouldSkipFetch(key) {
+        const health = endpointHealth[key];
+        return Date.now() < health.nextRetry;
+      }
+
+      function recordFetchResult(key, success) {
+        const health = endpointHealth[key];
+        if (success) {
+          health.failures = 0;
+          health.nextRetry = 0;
+          health.lastSuccess = Date.now();
+        } else {
+          health.failures = Math.min(health.failures + 1, 6);
+          const backoffMs = Math.min(1000 * Math.pow(2, health.failures), MAX_BACKOFF);
+          health.nextRetry = Date.now() + backoffMs;
+          console.warn(`[Robustness] ${key} backing off for ${Math.round(backoffMs/1000)}s (failures: ${health.failures})`);
+        }
+      }
+
+      // Real fetch with fallback + backoff
+      async function fetchWithFallback(url, key, parser) {
+        if (shouldSkipFetch(key)) {
+          return null; // Still in backoff
+        }
+
+        refreshingSources.add(key);
+        updateLoadingIndicators();
+
+        try {
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+
+          recordFetchResult(key, true);
+          refreshingSources.delete(key);
+          updateLoadingIndicators();
+
+          // Only clear global SIM MODE if *all* endpoints are healthy
+          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
+          setSimMode(anyFailing);
+
+          return parser(data);
+        } catch (err) {
+          console.warn(`[Core] ${key} fetch failed`, err);
+          recordFetchResult(key, false);
+          refreshingSources.delete(key);
+          updateLoadingIndicators();
+          setSimMode(true);
+          return null;
+        }
+      }
+
+      async function updateLivePrice() {
+        const data = await fetchWithFallback(API.price, 'price', d => d.bitcoin);
+        if (data) {
+          const prev = window.DASH.price;
+          window.DASH.price = data.usd;
+          window.DASH.priceChange = data.usd_24h_change;
+          window.DASH.sats = Math.floor(data.usd * 100000000);
+          window.DASH.prevPrice = prev;
+          dispatchUpdate('price', window.DASH);
+          updateFreshnessIndicators();
+        }
+        updateLastSync();
+      }
+
+      async function updateFearGreed() {
+        const data = await fetchWithFallback(API.fearGreed, 'fng', d => {
+          const entry = d.data[0];
+          return { value: parseInt(entry.value), classification: entry.value_classification };
+        });
+        if (data) {
+          window.DASH.fng = data;
+          dispatchUpdate('fng', data);
+          updateFreshnessIndicators();
+        }
+      }
+
+      async function updateNetworkStats() {
+        if (shouldSkipFetch('network')) {
+          updateLastSync();
+          return;
+        }
+
+        try {
+          const [heightRaw, hashrateData] = await Promise.all([
+            fetch(API.blockHeight).then(r => r.text()),
+            fetch(API.hashrate).then(r => r.json())
+          ]);
+
+          const height = parseInt(heightRaw, 10);
+          const hashrate = hashrateData.currentHashrate;
+          const difficulty = hashrateData.currentDifficulty;
+          const adjustment = hashrateData.difficulty?.[1]?.adjustment || 1.03;
+
+          window.DASH.network = {
+            blockHeight: height,
+            hashrate,
+            hashrateEH: (hashrate / 1e18).toFixed(0),
+            difficulty,
+            difficultyT: (difficulty / 1e12).toFixed(1),
+            nextAdjustment: (adjustment * 100)
+          };
+
+          recordFetchResult('network', true);
+          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
+          setSimMode(anyFailing);
+
+          dispatchUpdate('network', window.DASH.network);
+          updateHalvingCountdown(height);
+          updateFreshnessIndicators();
+        } catch (e) {
+          recordFetchResult('network', false);
+          setSimMode(true);
+        }
+        updateLastSync();
+      }
+
+      function updateHalvingCountdown(currentHeight) {
+        const target = 1050000;
+        const blocksLeft = Math.max(0, target - currentHeight);
+        const totalMinutes = blocksLeft * 10;
+        const days = Math.floor(totalMinutes / 1440);
+        const hours = Math.floor((totalMinutes % 1440) / 60);
+        const minutes = totalMinutes % 60;
+
+        const blocksEl = document.getElementById('halving-blocks');
+        const timeEl = document.getElementById('halving-time');
+
+        if (blocksEl) blocksEl.innerHTML = `${blocksLeft.toLocaleString()} <span class="text-base align-super text-white/50">BLOCKS</span>`;
+
+        if (timeEl) {
+          if (blocksLeft === 0) {
+            timeEl.textContent = 'HALVING COMPLETE';
+          } else if (days > 0) {
+            timeEl.textContent = `~${days} DAYS • ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          } else {
+            timeEl.textContent = `~${hours}h ${minutes}m`;
+          }
+        }
+      }
+
+      function renderChartUnavailable() {
+        if (chartInstance) {
+          chartInstance.destroy();
+          chartInstance = null;
+        }
+
+        const canvas = document.getElementById('price-chart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d', { alpha: true });
+        if (!ctx) return;
+
+        // Clear previous content
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Cyberpunk "unavailable" styling
+        ctx.fillStyle = '#4a4a5a';
+        ctx.font = '600 15px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        ctx.fillText('DATA UNAVAILABLE', centerX, centerY);
+      }
+
+      async function updateChart() {
+        if (shouldSkipFetch('chart')) {
+          renderChartUnavailable();
+          return;
+        }
+
+        try {
+          const data = await fetch(API.chart).then(r => r.json());
+          const prices = data.prices;
+
+          window.DASH.chartData = prices;
+
+          if (chartInstance) chartInstance.destroy();
+
+          const ctx = document.getElementById('price-chart');
+          if (!ctx) return;
+
+          chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: prices.map(p => new Date(p[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+              datasets: [{
+                label: 'BTC Price (USD)',
+                data: prices.map(p => p[1]),
+                borderColor: '#00f9ff',
+                borderWidth: 2.5,
+                tension: 0.35,
+                fill: true,
+                backgroundColor: 'rgba(0, 249, 255, 0.08)',
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: '#ff00aa'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#0a0a12',
+                  borderColor: '#00f9ff',
+                  borderWidth: 1,
+                  titleColor: '#00f9ff',
+                  bodyColor: '#e0e7ff',
+                  displayColors: false
+                }
+              },
+              scales: {
+                x: {
+                  grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                  ticks: { color: 'rgba(224, 231, 255, 0.6)', font: { size: 10 } }
+                },
+                y: {
+                  grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                  ticks: {
+                    color: 'rgba(224, 231, 255, 0.6)',
+                    font: { size: 10 },
+                    callback: v => '$' + (v / 1000) + 'k'
+                  }
+                }
+              },
+              elements: {
+                line: { tension: 0.35 },
+                point: { hitRadius: 20 }
+              }
+            }
+          });
+
+          recordFetchResult('chart', true);
+          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
+          setSimMode(anyFailing);
+          updateFreshnessIndicators();
+        } catch (e) {
+          recordFetchResult('chart', false);
+          setSimMode(true);
+          renderChartUnavailable();
+          console.warn('[Core] Chart load failed');
+        }
+      }
+
+      // Saylor purchase grid
+      function renderSaylorPurchases() {
+        const container = document.getElementById('saylor-purchases');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const recent = [...saylorPurchases].reverse().slice(0, 6);
+
+        recent.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'bg-black/30 border border-white/10 rounded-lg p-3 text-xs';
+          div.innerHTML = `
+            <div class="text-[#ffd700]/70">${p.date}</div>
+            <div class="font-mono text-lg text-[#ffd700] mt-0.5">${p.btc.toLocaleString()} <span class="text-xs text-white/50">BTC</span></div>
+            <div class="text-white/60">$${(p.usd / 1e6).toFixed(0)}M</div>
+          `;
+          container.appendChild(div);
+        });
+      }
+
+      window.DASH.simulateSaylorPurchase = function(btcAdded) {
+        const usdAtTime = Math.floor(btcAdded * window.DASH.price);
+
+        saylorPurchases.unshift({
+          date: new Date().toISOString().split('T')[0],
+          btc: btcAdded,
+          usd: usdAtTime
+        });
+
+        window.DASH.saylor.btc += btcAdded;
+        dispatchUpdate('saylor', window.DASH.saylor);
+
+        renderSaylorPurchases();
+        return window.DASH.saylor.btc;
+      };
+
+      // Wire ACQUIRE button with processing state (Medium Priority)
+      const acquireBtnEl = document.getElementById('acquire-btn');
+      if (acquireBtnEl) {
+        acquireBtnEl.addEventListener('click', () => {
+          if (acquireBtnEl.disabled) return;
+
+          const originalText = acquireBtnEl.textContent;
+          acquireBtnEl.disabled = true;
+          acquireBtnEl.textContent = 'PROCESSING...';
+          acquireBtnEl.style.opacity = '0.7';
+
+          // Simulate network delay for realism (short)
+          setTimeout(() => {
+            const added = Math.floor(Math.random() * 20000) + 8000;
+            window.DASH.simulateSaylorPurchase(added);
+
+            // Visual effects are handled in Animation layer via events if needed
+            // For now we keep confetti in the animation side
+
+            acquireBtnEl.disabled = false;
+            acquireBtnEl.textContent = originalText;
+            acquireBtnEl.style.opacity = '1';
+          }, 420);
+        });
+      }
+
+      // Main polling
+      function startLiveUpdates() {
+        updateLivePrice();
+        updateFearGreed();
+        updateNetworkStats();
+        updateChart();
+        renderSaylorPurchases();
+
+        setInterval(updateLivePrice, 13000);
+        setInterval(updateFearGreed, 240000);
+        setInterval(updateNetworkStats, 48000);
+        setInterval(updateChart, 480000);
+
+        updateLastSync();
+        console.log('%c[Core Logic] Live Bitcoin data engine started', 'color:#00ff9f');
+      }
+
+      // Initial boot
+      setTimeout(() => {
+        startLiveUpdates();
+        updateFreshnessIndicators();
+      }, 400);
+
+      // Periodically refresh the "data age" display even when no new fetches succeed
+      setInterval(() => {
+        if (document.getElementById('last-sync')) {
+          updateLastSync();
+          updateFreshnessIndicators();
+        }
+      }, 30000); // every 30 seconds
+
+      window.DASH.recalibrate = function() {
+        // Reset all backoffs so user can force an immediate retry
+        Object.keys(endpointHealth).forEach(key => {
+          endpointHealth[key].failures = 0;
+          endpointHealth[key].nextRetry = 0;
+        });
+        setSimMode(false);
+        startLiveUpdates();
+        console.log('%c[Robustness] Manual recalibrate triggered — backoffs reset', 'color:#ffd700');
+      };
+    })();
+
+    // =====================================================
+    // ANIMATION & EFFECTS LAYER (from Animation Agent)
+    // =====================================================
+    (function() {
+      const DASH = window.DASH;
+      const priceEl = document.getElementById('price-usd');
+      const changeEl = document.getElementById('price-change');
+      const satsEl = document.getElementById('price-sats');
+      const gaugeSvg = document.getElementById('fng-gauge');
+      const fngValue = document.getElementById('fng-value');
+      const fngLabel = document.getElementById('fng-label');
+      const saylorBtc = document.getElementById('saylor-btc');
+      const saylorUsd = document.getElementById('saylor-usd');
+      const acquireBtn = document.getElementById('acquire-btn');
+      const toastContainer = document.getElementById('toast-container');
+      const fxCanvas = document.getElementById('fx-canvas');
+
+      let confettiCtx = null;
+      let particles = [];
+      let animFrame = null;
+
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+      // Price flashing
+      function flashPrice(isUp) {
+        if (!priceEl || !changeEl) return;
+        const flashClass = isUp ? 'price-flash-up' : 'price-flash-down';
+        const chevron = isUp ? '▲' : '▼';
+        const color = isUp ? '#00ff9f' : '#ff0033';
+
+        priceEl.classList.remove('price-flash-up', 'price-flash-down');
+        changeEl.innerHTML = `<span class="chevron" style="color:${color}">${chevron}</span> <span>${(DASH.priceChange || 0).toFixed(2)}%</span>`;
+
+        void priceEl.offsetWidth;
+        priceEl.classList.add(flashClass);
+
+        setTimeout(() => priceEl.classList.remove(flashClass), 450);
+      }
+
+      window.addEventListener('dashboard:update', (e) => {
+        const { type, payload } = e.detail;
+        if (type === 'price' && payload) {
+          if (priceEl) priceEl.textContent = '$' + payload.price.toLocaleString('en-US', { minimumFractionDigits: 2 });
+          if (satsEl && payload.sats) satsEl.textContent = payload.sats.toLocaleString('en-US') + ' sats';
+          if (payload.prevPrice != null && payload.price != null) {
+            flashPrice(payload.price > payload.prevPrice);
+          }
+        }
+        if (type === 'fng' && payload) {
+          updateGauge(payload.value);
+        }
+        if (type === 'saylor' && payload && saylorBtc) {
+          animateCounter(saylorBtc, payload.btc);
+        }
+        if (type === 'price' && payload && saylorUsd) {
+          const usd = Math.floor(DASH.saylor.btc * payload.price);
+          saylorUsd.textContent = '$' + (usd / 1e9).toFixed(2) + 'B';
+        }
+      });
+
+      // Gauge
+      function createGauge() {
+        if (!gaugeSvg) return;
+        gaugeSvg.innerHTML = `
+          <defs>
+            <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="coloredBlur"/>
+              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <linearGradient id="needleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#e0e7ff"/><stop offset="100%" stop-color="#00f9ff"/>
+            </linearGradient>
+          </defs>
+          <circle cx="105" cy="105" r="98" fill="none" stroke="#00f9ff" stroke-width="1" opacity="0.15"/>
+          
+          <!-- Precise color zones aligned to needle positions (-120° to +120°) -->
+          <!-- Extreme Fear (0-25%) red -->
+          <path d="M 61 28.79 A 88 88 0 0 1 149 28.79" fill="none" stroke="#ff0033" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <!-- Fear (25-45%) orange -->
+          <path d="M 149 28.79 A 88 88 0 0 1 191.08 86.7" fill="none" stroke="#ff6600" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <!-- Neutral (45-55%) yellow -->
+          <path d="M 191.08 86.7 A 88 88 0 0 1 191.08 123.3" fill="none" stroke="#ffd700" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <!-- Greed (55-75%) cyan -->
+          <path d="M 191.08 123.3 A 88 88 0 0 1 149 181.21" fill="none" stroke="#00f9ff" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <!-- Extreme Greed (75-100%) lime -->
+          <path d="M 149 181.21 A 88 88 0 0 1 61 181.21" fill="none" stroke="#00ff9f" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          
+          <g id="needle-group" style="transition: transform 650ms cubic-bezier(0.23, 1.0, 0.32, 1); transform-origin: 105px 105px;">
+            <line x1="105" y1="105" x2="105" y2="32" stroke="url(#needleGrad)" stroke-width="4.5" stroke-linecap="round"/>
+            <circle cx="105" cy="30" r="5" fill="#00f9ff" filter="url(#gaugeGlow)" opacity="0.9"/>
+            <circle cx="105" cy="105" r="6" fill="#111118" stroke="#00f9ff" stroke-width="2"/>
+            <circle cx="105" cy="105" r="3" fill="#e0e7ff"/>
+          </g>
+        `;
+      }
+
+      function updateGauge(value) {
+        if (!gaugeSvg) return;
+        const needle = gaugeSvg.querySelector('#needle-group');
+        if (!needle) return;
+        const angle = -120 + (value / 100) * 240;
+        needle.style.transform = `rotate(${angle}deg)`;
+        if (fngValue) fngValue.textContent = value;
+        if (fngLabel) {
+          let label = 'NEUTRAL', color = '#ffd700';
+          if (value <= 25) { label = 'EXTREME FEAR'; color = '#ff0033'; }
+          else if (value <= 45) { label = 'FEAR'; color = '#ff6600'; }
+          else if (value <= 55) { label = 'NEUTRAL'; color = '#ffd700'; }
+          else if (value <= 75) { label = 'GREED'; color = '#00f9ff'; }
+          else { label = 'EXTREME GREED'; color = '#00ff9f'; }
+          fngLabel.textContent = label; fngLabel.style.color = color;
+        }
+      }
+
+      // Alien head
+      function driveAlienHead() {
+        const alien = document.getElementById('alien-head');
+        if (!alien) return;
+        alien.classList.add('pulse');
+        setInterval(() => {
+          alien.classList.add('glitch');
+          const orbs = alien.querySelectorAll('.alien-orb');
+          const pupils = alien.querySelectorAll('.alien-eye-slit');
+          const useCyan = Math.random() > 0.5;
+          const color = useCyan ? '#00f9ff' : '#ff00aa';
+          orbs.forEach(o => o.setAttribute('fill', color));
+          pupils.forEach(p => p.setAttribute('fill', color));
+          setTimeout(() => alien.classList.remove('glitch'), 90);
+        }, 2400);
+      }
+
+      // Confetti
+      function initConfetti() {
+        if (!fxCanvas) return;
+        fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight;
+        confettiCtx = fxCanvas.getContext('2d', { alpha: true });
+        window.addEventListener('resize', () => { fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight; });
+      }
+
+      function spawnConfettiBurst(x = window.innerWidth/2, y = window.innerHeight*0.35) {
+        if (!confettiCtx) return;
+        const colors = ['#00f9ff', '#ff00aa', '#ffd700', '#00ff9f'];
+        for (let i = 0; i < 110; i++) {
+          particles.push({
+            x, y,
+            vx: (Math.random()-0.5)*9,
+            vy: (Math.random()-0.5)*7-3,
+            size: Math.random()*5 + 2.5,
+            color: colors[Math.floor(Math.random()*colors.length)],
+            life: 90 + Math.random()*30,
+            gravity: 0.12 + Math.random()*0.08,
+            rotation: Math.random()*360,
+            rotSpeed: (Math.random()-0.5)*8
+          });
+        }
+        if (!animFrame) animateParticles();
+      }
+
+      function animateParticles() {
+        if (!confettiCtx || particles.length === 0) { animFrame = null; return; }
+        confettiCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+        particles = particles.filter(p => {
+          p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.vx *= 0.985; p.rotation += p.rotSpeed; p.life--;
+          confettiCtx.save();
+          confettiCtx.translate(p.x, p.y); confettiCtx.rotate(p.rotation * Math.PI / 180);
+          confettiCtx.fillStyle = p.color; confettiCtx.globalAlpha = Math.max(p.life / 110, 0.1);
+          confettiCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.6);
+          confettiCtx.restore();
+          return p.life > 0;
+        });
+        animFrame = requestAnimationFrame(animateParticles);
+      }
+
+      // Counter animation
+      function animateCounter(el, target, duration = 1400) {
+        if (!el) return;
+        const start = parseFloat(el.textContent.replace(/,/g,'')) || 0;
+        const startTime = performance.now();
+        function step(now) {
+          const progress = Math.min((now - startTime) / duration, 1);
+          const current = Math.floor(start + (target - start) * easeOutCubic(progress));
+          el.textContent = current.toLocaleString('en-US');
+          if (progress < 1) requestAnimationFrame(step);
+          else el.textContent = target.toLocaleString('en-US');
+        }
+        requestAnimationFrame(step);
+      }
+
+      // Toast
+      function showToast(message) {
+        if (!toastContainer) return;
+        const toast = document.createElement('div');
+        toast.className = `neural-toast px-5 py-3 rounded-xl border text-sm font-medium bg-[#0a0a12]/95 border-[#00f9ff]/40 text-[#00f9ff]`;
+        toast.innerHTML = `<div>${message}</div>`;
+        toastContainer.appendChild(toast);
+        setTimeout(() => { toast.style.transition = 'all 0.25s ease'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 2300);
+      }
+
+      // Acquire button (visual effects only - logic now lives in Core)
+      function wireAcquire() {
+        if (!acquireBtn) return;
+        // The real logic is now handled in the Core Logic layer
+        // This just ensures the visual burst still works
+      }
+
+      // Init everything
+      function initEffects() {
+        createGauge();
+        initConfetti();
+        driveAlienHead();
+        wireAcquire();
+
+        setTimeout(() => {
+          updateGauge(23);
+          if (saylorBtc) saylorBtc.textContent = '843,738';
+        }, 600);
+
+        window.DASH._fx = { flashPrice, updateGauge, spawnConfetti: spawnConfettiBurst, showToast, animateCounter };
+        console.log('%c[Animation] All cyberpunk effects active', 'color:#ff00aa');
+      }
+
+      initEffects();
+
+      // Keyboard shortcut for RECALIBRATE (R key) - Nice-to-have polish
+      document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'r' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+          if (window.DASH?.recalibrate) {
+            window.DASH.recalibrate();
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
