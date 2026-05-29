@@ -586,16 +586,55 @@
         }));
       }
 
-      // Real fetch with fallback
+      // === Live Data Robustness: Endpoint Health Tracking ===
+      const endpointHealth = {
+        price:     { failures: 0, nextRetry: 0 },
+        fng:       { failures: 0, nextRetry: 0 },
+        network:   { failures: 0, nextRetry: 0 },
+        chart:     { failures: 0, nextRetry: 0 }
+      };
+
+      const MAX_BACKOFF = 5 * 60 * 1000; // 5 minutes max
+
+      function shouldSkipFetch(key) {
+        const health = endpointHealth[key];
+        return Date.now() < health.nextRetry;
+      }
+
+      function recordFetchResult(key, success) {
+        const health = endpointHealth[key];
+        if (success) {
+          health.failures = 0;
+          health.nextRetry = 0;
+        } else {
+          health.failures = Math.min(health.failures + 1, 6);
+          const backoffMs = Math.min(1000 * Math.pow(2, health.failures), MAX_BACKOFF);
+          health.nextRetry = Date.now() + backoffMs;
+          console.warn(`[Robustness] ${key} backing off for ${Math.round(backoffMs/1000)}s (failures: ${health.failures})`);
+        }
+      }
+
+      // Real fetch with fallback + backoff
       async function fetchWithFallback(url, key, parser) {
+        if (shouldSkipFetch(key)) {
+          return null; // Still in backoff
+        }
+
         try {
           const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
-          setSimMode(false);
+
+          recordFetchResult(key, true);
+
+          // Only clear global SIM MODE if *all* endpoints are healthy
+          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
+          setSimMode(anyFailing);
+
           return parser(data);
         } catch (err) {
-          console.warn(`[Core] ${key} fetch failed, using last known / mock`, err);
+          console.warn(`[Core] ${key} fetch failed`, err);
+          recordFetchResult(key, false);
           setSimMode(true);
           return null;
         }
@@ -626,6 +665,11 @@
       }
 
       async function updateNetworkStats() {
+        if (shouldSkipFetch('network')) {
+          updateLastSync();
+          return;
+        }
+
         try {
           const [heightRaw, hashrateData] = await Promise.all([
             fetch(API.blockHeight).then(r => r.text()),
@@ -646,11 +690,14 @@
             nextAdjustment: (adjustment * 100)
           };
 
-          dispatchUpdate('network', window.DASH.network);
+          recordFetchResult('network', true);
+          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
+          setSimMode(anyFailing);
 
-          // Update halving
+          dispatchUpdate('network', window.DASH.network);
           updateHalvingCountdown(height);
         } catch (e) {
+          recordFetchResult('network', false);
           setSimMode(true);
         }
         updateLastSync();
@@ -670,6 +717,8 @@
       }
 
       async function updateChart() {
+        if (shouldSkipFetch('chart')) return;
+
         try {
           const data = await fetch(API.chart).then(r => r.json());
           const prices = data.prices;
@@ -732,7 +781,12 @@
               }
             }
           });
+
+          recordFetchResult('chart', true);
+          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
+          setSimMode(anyFailing);
         } catch (e) {
+          recordFetchResult('chart', false);
           setSimMode(true);
           console.warn('[Core] Chart load failed, using placeholder');
         }
@@ -798,8 +852,14 @@
       }, 400);
 
       window.DASH.recalibrate = function() {
+        // Reset all backoffs so user can force an immediate retry
+        Object.keys(endpointHealth).forEach(key => {
+          endpointHealth[key].failures = 0;
+          endpointHealth[key].nextRetry = 0;
+        });
         setSimMode(false);
         startLiveUpdates();
+        console.log('%c[Robustness] Manual recalibrate triggered — backoffs reset', 'color:#ffd700');
       };
     })();
 
