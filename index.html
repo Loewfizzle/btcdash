@@ -401,7 +401,21 @@
       </div>
     </div>
 
-    <!-- NETWORK STATS -->
+    <!-- 30-DAY CHART -->
+    <div class="holo-card rounded-2xl p-7 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <div class="section-title">30-DAY PRICE TRAJECTORY</div>
+          <div class="text-xs text-white/40">COINGECKO • DAILY CLOSE</div>
+        </div>
+        <div class="text-xs px-3 py-1 rounded bg-white/5 border border-white/10 text-[#00f9ff]/70">CHROME VEIL • v4.2</div>
+      </div>
+      <div class="chart-container h-[280px]">
+        <canvas id="price-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- NETWORK STATS (moved beneath chart per user request) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="holo-card rounded-2xl p-6">
         <div class="section-title">CURRENT HASH RATE</div>
@@ -422,20 +436,6 @@
         <div class="section-title text-[#ff00aa]">NEXT HALVING</div>
         <div id="halving-blocks" class="text-4xl font-bold mono tracking-tighter mt-3">98,488 <span class="text-base align-super text-white/50">BLOCKS</span></div>
         <div id="halving-time" class="text-sm text-[#ff00aa]/80 mono mt-1">~682 DAYS • 14:22:09</div>
-      </div>
-    </div>
-
-    <!-- 30-DAY CHART -->
-    <div class="holo-card rounded-2xl p-7 mb-8">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <div class="section-title">30-DAY PRICE TRAJECTORY</div>
-          <div class="text-xs text-white/40">COINGECKO • DAILY CLOSE</div>
-        </div>
-        <div class="text-xs px-3 py-1 rounded bg-white/5 border border-white/10 text-[#00f9ff]/70">CHROME VEIL • v4.2</div>
-      </div>
-      <div class="chart-container h-[280px]">
-        <canvas id="price-chart"></canvas>
       </div>
     </div>
 
