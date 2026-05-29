@@ -257,6 +257,28 @@
       border: 1px solid #ff0033;
       color: #ffaa00;
     }
+
+    /* Stale data visual treatment */
+    .data-stale {
+      opacity: 0.75;
+      filter: saturate(0.7);
+    }
+
+    .data-stale .section-title {
+      color: #ffaa00 !important;
+    }
+
+    /* Subtle loading indicator */
+    @keyframes subtle-pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    #price-freshness,
+    #fng-freshness,
+    #network-freshness {
+      transition: opacity 0.2s ease;
+    }
   </style>
 </head>
 <body class="neural-bg text-[#e0e7ff] overflow-x-hidden">
@@ -580,7 +602,29 @@
       function setSimMode(active) {
         window.DASH.isSimMode = active;
         const banner = document.getElementById('sim-banner');
-        if (banner) banner.classList.toggle('hidden', !active);
+        if (!banner) return;
+
+        if (!active) {
+          banner.classList.add('hidden');
+          return;
+        }
+
+        // Build a more informative message
+        const degraded = [];
+        if (endpointHealth.price.failures > 0) degraded.push('Price');
+        if (endpointHealth.fng.failures > 0) degraded.push('F&G');
+        if (endpointHealth.network.failures > 0) degraded.push('Network');
+        if (endpointHealth.chart.failures > 0) degraded.push('Chart');
+
+        let message = 'SIM MODE — NEURAL UPLINK DEGRADED';
+        if (degraded.length > 0) {
+          message += ` • ${degraded.join(' + ')} using cached data`;
+        } else {
+          message += ' • USING CURATED MOCK DATA';
+        }
+
+        banner.textContent = message;
+        banner.classList.remove('hidden');
       }
 
       function updateLastSync() {
@@ -641,8 +685,55 @@
         return { text: `${Math.floor(ageSec/60)}m ago`, color: '#ff6600' };
       }
 
+      function updateLoadingIndicators() {
+        // Simple pulsing dot next to freshness labels when refreshing
+        const indicators = {
+          price:  document.getElementById('price-freshness'),
+          fng:    document.getElementById('fng-freshness'),
+          network: document.getElementById('network-freshness')
+        };
+
+        Object.keys(indicators).forEach(key => {
+          const el = indicators[key];
+          if (!el) return;
+
+          if (refreshingSources.has(key)) {
+            el.textContent = '⟳ ' + (el.textContent.replace('⟳ ', ''));
+            el.style.opacity = '0.6';
+          } else {
+            el.style.opacity = '1';
+          }
+        });
+      }
+
       function updateFreshnessIndicators() {
-        // Price
+        const priceCard = document.querySelector('.lg\\:col-span-5.holo-card');
+        const fngCard = document.querySelector('.lg\\:col-span-3.holo-card');
+        const networkCards = document.querySelectorAll('#network-freshness, #network-freshness2, #network-freshness3');
+
+        // Price card staleness
+        if (priceCard) {
+          const priceAge = endpointHealth.price.lastSuccess;
+          const isStale = priceAge && (Date.now() - priceAge > 5 * 60 * 1000);
+          priceCard.classList.toggle('data-stale', !!isStale);
+        }
+
+        // F&G card staleness
+        if (fngCard) {
+          const fngAge = endpointHealth.fng.lastSuccess;
+          const isStale = fngAge && (Date.now() - fngAge > 5 * 60 * 1000);
+          fngCard.classList.toggle('data-stale', !!isStale);
+        }
+
+        // Network cards staleness (apply to parent cards)
+        const networkParent = document.querySelector('#hashrate')?.closest('.holo-card');
+        if (networkParent) {
+          const netAge = endpointHealth.network.lastSuccess;
+          const isStale = netAge && (Date.now() - netAge > 5 * 60 * 1000);
+          networkParent.classList.toggle('data-stale', !!isStale);
+        }
+
+        // Update the small freshness labels
         const priceFresh = document.getElementById('price-freshness');
         if (priceFresh) {
           const age = getDataAge('price');
@@ -650,7 +741,6 @@
           priceFresh.style.color = age.color;
         }
 
-        // Fear & Greed
         const fngFresh = document.getElementById('fng-freshness');
         if (fngFresh) {
           const age = getDataAge('fng');
@@ -658,7 +748,6 @@
           fngFresh.style.color = age.color;
         }
 
-        // Network stats (we use the same age for all three cards for simplicity)
         const netAge = getDataAge('network');
         ['network-freshness', 'network-freshness2', 'network-freshness3'].forEach(id => {
           const el = document.getElementById(id);
@@ -670,6 +759,9 @@
       }
 
       const MAX_BACKOFF = 5 * 60 * 1000; // 5 minutes max
+
+      // Track which sources are currently being fetched (for loading states)
+      const refreshingSources = new Set();
 
       function shouldSkipFetch(key) {
         const health = endpointHealth[key];
@@ -696,12 +788,17 @@
           return null; // Still in backoff
         }
 
+        refreshingSources.add(key);
+        updateLoadingIndicators();
+
         try {
           const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
 
           recordFetchResult(key, true);
+          refreshingSources.delete(key);
+          updateLoadingIndicators();
 
           // Only clear global SIM MODE if *all* endpoints are healthy
           const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
@@ -711,6 +808,8 @@
         } catch (err) {
           console.warn(`[Core] ${key} fetch failed`, err);
           recordFetchResult(key, false);
+          refreshingSources.delete(key);
+          updateLoadingIndicators();
           setSimMode(true);
           return null;
         }
