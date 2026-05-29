@@ -170,9 +170,16 @@
       transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
-    /* === GAUGE STYLING === */
-    .gauge-svg {
-      filter: drop-shadow(0 0 12px rgba(0, 249, 255, 0.2));
+    #fng-value {
+      text-shadow: 
+        0 0 6px rgba(0, 249, 255, 0.7),
+        0 0 16px rgba(0, 249, 255, 0.35);
+      letter-spacing: -1.5px;
+    }
+
+    #fng-label {
+      font-feature-settings: "tnum";
+      letter-spacing: 1.5px;
     }
 
     /* === ALIEN HEAD === */
@@ -299,10 +306,7 @@
       transition: opacity 0.2s ease;
     }
 
-    .gauge-needle {
-      transform-origin: 50% 50%;
-      transform-box: fill-box;
-    }
+
   </style>
 </head>
 <body class="neural-bg text-[#e0e7ff] overflow-x-hidden">
@@ -314,7 +318,7 @@
 
   <!-- SIM MODE BANNER (only visible on real degradation) -->
   <div id="sim-banner" class="hidden fixed top-0 left-0 right-0 z-[200] sim-banner text-center py-1 text-xs tracking-[1px] font-medium">
-    NEURAL UPLINK DEGRADED — Using cached data • Tap RECAL to retry live feeds
+    LIVE FEED TEMPORARILY DEGRADED — showing cached data • Tap RECAL to retry
   </div>
 
   <!-- HEADER -->
@@ -429,22 +433,54 @@
         </div>
       </div>
 
-      <!-- FEAR & GREED GAUGE -->
-      <div class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col items-center">
+      <!-- FEAR & GREED INDEX -->
+      <div class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col">
         <div class="flex items-center justify-between w-full">
           <div class="section-title">FEAR &amp; GREED INDEX</div>
           <span id="fng-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
         </div>
-        
-        <div class="relative w-[160px] h-[160px] sm:w-[190px] sm:h-[190px] lg:w-[210px] lg:h-[210px] mt-1">
-          <svg id="fng-gauge" width="100%" height="100%" viewBox="0 0 210 210" class="gauge-svg" style="max-width: 210px; max-height: 210px;">
-            <!-- Populated by Animation Agent -->
-          </svg>
-          
-          <!-- Text cluster pulled upward + tighter label to avoid overlapping bottom color arcs -->
-          <div class="absolute inset-0 flex flex-col items-center justify-start pt-6 sm:pt-7">
-            <div id="fng-value" class="text-5xl sm:text-6xl font-black mono tracking-tighter">23</div>
-            <div id="fng-label" class="text-[10px] sm:text-xs tracking-[1.5px] font-semibold text-[#ff0033] mt-0.5">EXTREME FEAR</div>
+
+        <!-- Big value + classification -->
+        <div class="text-center my-3">
+          <div id="fng-value" class="text-6xl sm:text-7xl font-black mono tracking-[-2.5px]">23</div>
+          <div id="fng-label" 
+               class="mt-1 inline-block px-3 py-px text-[10px] tracking-[2px] font-semibold border border-current/50 rounded bg-black/40">EXTREME FEAR</div>
+        </div>
+
+        <!-- Cyberpunk Horizontal Sentiment Spectrum -->
+        <div class="mt-auto w-full">
+          <div class="relative h-[20px] rounded bg-[#0a0a12] border border-white/10 overflow-hidden">
+            <!-- 5 colored zones (proportional to index ranges) -->
+            <div class="absolute inset-0 flex">
+              <div style="width:25%; background:#ff0033; opacity:0.85;"></div>
+              <div style="width:20%; background:#ff6600; opacity:0.85;"></div>
+              <div style="width:10%; background:#ffd700; opacity:0.85;"></div>
+              <div style="width:20%; background:#00f9ff; opacity:0.85;"></div>
+              <div style="width:25%; background:#00ff9f; opacity:0.85;"></div>
+            </div>
+
+            <!-- Subtle cyberpunk scan/grid overlay -->
+            <div class="absolute inset-0 pointer-events-none"
+                 style="background: repeating-linear-gradient(90deg, rgba(0,249,255,0.06) 0px, rgba(0,249,255,0.06) 1px, transparent 1px, transparent 7px);"></div>
+
+            <!-- Glowing data probe / sliding marker -->
+            <div id="fng-marker" 
+                 class="absolute top-[-1px] bottom-[-1px] w-[4px] transition-all duration-[650ms] ease-out flex items-center justify-center"
+                 style="left: 23%;">
+              <!-- Vertical neon beam -->
+              <div class="w-[1.5px] h-full bg-white shadow-[0_0_8px_#00f9ff,0_0_18px_#00f9ff]"></div>
+              <!-- Bright sensor node -->
+              <div class="absolute w-[9px] h-[9px] rounded-full border border-[#00f9ff] bg-[#050508] shadow-[0_0_6px_#00f9ff,0_0_12px_#00f9ff]"></div>
+            </div>
+          </div>
+
+          <!-- Scale ticks -->
+          <div class="flex text-[7px] text-white/20 justify-between mt-1 px-0.5 font-mono tracking-[1.5px]">
+            <div>0</div>
+            <div>25</div>
+            <div>50</div>
+            <div>75</div>
+            <div>100</div>
           </div>
         </div>
       </div>
@@ -584,20 +620,6 @@
         isSimMode: false
       };
 
-      function updateDataModeIndicator(isSim) {
-        const ind = document.getElementById('data-mode-indicator');
-        if (!ind) return;
-        if (isSim) {
-          ind.textContent = 'SIM';
-          ind.style.borderColor = '#ffaa00';
-          ind.style.color = '#ffaa00';
-        } else {
-          ind.textContent = 'LIVE';
-          ind.style.borderColor = 'rgba(0, 255, 159, 0.4)';
-          ind.style.color = 'rgba(0, 255, 159, 0.85)';
-        }
-      }
-
       function dispatchUpdate(type, payload) {
         window.dispatchEvent(new CustomEvent('dashboard:update', {
           detail: { type, payload, timestamp: Date.now() }
@@ -642,26 +664,47 @@
           return;
         }
 
-        // Only show the top banner when truly degraded (not on healthy deploys)
-        const degraded = [];
-        if (endpointHealth.price.failures > 0) degraded.push('Price');
-        if (endpointHealth.fng.failures > 0) degraded.push('F&G');
-        if (endpointHealth.network.failures > 0) degraded.push('Network');
-        if (endpointHealth.chart.failures > 0) degraded.push('Chart');
+        // Much calmer messaging — only critical feeds matter now
+        const priceHealth = endpointHealth.price;
+        const fngHealth = endpointHealth.fng;
 
-        let message = 'NEURAL UPLINK DEGRADED';
-        if (degraded.length > 0) {
-          message += ` — ${degraded.join(' + ')} using cached data`;
+        let message = 'LIVE FEED TEMPORARILY DEGRADED';
+        if (priceHealth.failures >= 2 || fngHealth.failures >= 2) {
+          message += ' — showing last cached values while recovering';
           banner.style.borderColor = '#ffaa00';
           banner.style.background = 'linear-gradient(to right, #2a1a00, #1a1200)';
         } else {
-          message += ' — Using curated fallback data';
+          message += ' — using curated fallback';
           banner.style.borderColor = '#ff0033';
           banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
         }
 
         banner.textContent = message;
         banner.classList.remove('hidden');
+      }
+
+      // Smarter LIVE pill: stay "LIVE" if price has succeeded recently, even if other things are noisy
+      function updateDataModeIndicator(isSim) {
+        const ind = document.getElementById('data-mode-indicator');
+        if (!ind) return;
+
+        const priceAge = endpointHealth.price?.lastSuccess || 0;
+        const isPriceFresh = priceAge && (Date.now() - priceAge < 3 * 60 * 1000); // 3 minutes
+
+        if (!isSim && isPriceFresh) {
+          ind.textContent = 'LIVE';
+          ind.style.borderColor = 'rgba(0, 255, 159, 0.4)';
+          ind.style.color = 'rgba(0, 255, 159, 0.85)';
+        } else if (isSim) {
+          ind.textContent = 'SIM';
+          ind.style.borderColor = '#ffaa00';
+          ind.style.color = '#ffaa00';
+        } else {
+          // Rare transitional state
+          ind.textContent = 'LIVE';
+          ind.style.borderColor = 'rgba(0, 255, 159, 0.4)';
+          ind.style.color = 'rgba(0, 255, 159, 0.85)';
+        }
       }
 
       function updateLastSync() {
@@ -897,6 +940,17 @@
         }
       }
 
+      // Simple timeout wrapper for fetch (prevents long hangs on flaky public APIs)
+      function fetchWithTimeout(url, timeoutMs = 9500) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { 
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' } 
+        })
+          .finally(() => clearTimeout(timer));
+      }
+
       // Real fetch with fallback + backoff
       async function fetchWithFallback(url, key, parser) {
         if (shouldSkipFetch(key)) {
@@ -907,7 +961,7 @@
         updateLoadingIndicators();
 
         try {
-          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const res = await fetchWithTimeout(url);
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
 
@@ -915,9 +969,10 @@
           refreshingSources.delete(key);
           updateLoadingIndicators();
 
-          // Only clear global SIM MODE if *all* endpoints are healthy
-          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
-          setSimMode(anyFailing);
+          // Only price and F&G control the global banner. Success on either clears it.
+          if (key === 'price' || key === 'fng') {
+            setSimMode(false);
+          }
 
           return parser(data);
         } catch (err) {
@@ -925,7 +980,15 @@
           recordFetchResult(key, false);
           refreshingSources.delete(key);
           updateLoadingIndicators();
-          setSimMode(true);
+
+          // Only promote to visible "degraded" banner on *sustained* failures of critical feeds
+          if (key === 'price' || key === 'fng') {
+            const health = endpointHealth[key];
+            if (health.failures >= 2) {
+              setSimMode(true);
+            }
+          }
+          // Network and chart failures never force the top banner anymore
           return null;
         }
       }
@@ -983,15 +1046,14 @@
           };
 
           recordFetchResult('network', true);
-          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
-          setSimMode(anyFailing);
+          // Network success does not affect the main LIVE/SIM banner
 
           dispatchUpdate('network', window.DASH.network);
           updateHalvingCountdown(height);
           updateFreshnessIndicators();
         } catch (e) {
           recordFetchResult('network', false);
-          setSimMode(true);
+          // Network blips no longer flip the global degraded banner (widget shows its own staleness)
         }
         updateLastSync();
       }
@@ -1117,12 +1179,10 @@
           });
 
           recordFetchResult('chart', true);
-          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
-          setSimMode(anyFailing);
+          // Chart success/failure is isolated — it renders its own "DATA UNAVAILABLE" state
           updateFreshnessIndicators();
         } catch (e) {
           recordFetchResult('chart', false);
-          setSimMode(true);
           renderChartUnavailable();
           console.warn('[Core] Chart load failed');
         }
@@ -1194,6 +1254,7 @@
         if (document.getElementById('last-sync')) {
           updateLastSync();
           updateFreshnessIndicators();
+          updateDataModeIndicator(window.DASH.isSimMode);
         }
       }, 30000); // every 30 seconds
 
@@ -1217,7 +1278,6 @@
       const priceEl = document.getElementById('price-usd');
       const changeEl = document.getElementById('price-change');
       const satsEl = document.getElementById('price-sats');
-      const gaugeSvg = document.getElementById('fng-gauge');
       const fngValue = document.getElementById('fng-value');
       const fngLabel = document.getElementById('fng-label');
       const saylorBtc = document.getElementById('saylor-btc');
@@ -1228,6 +1288,29 @@
       let confettiCtx = null;
       let particles = [];
       let animFrame = null;
+
+      // Cyberpunk Fear & Greed horizontal spectrum bar
+      function updateFearGreed(value) {
+        if (fngValue) fngValue.textContent = value;
+
+        if (fngLabel) {
+          let label = 'NEUTRAL', color = '#ffd700';
+          if (value <= 25) { label = 'EXTREME FEAR'; color = '#ff0033'; }
+          else if (value <= 45) { label = 'FEAR'; color = '#ff6600'; }
+          else if (value <= 55) { label = 'NEUTRAL'; color = '#ffd700'; }
+          else if (value <= 75) { label = 'GREED'; color = '#00f9ff'; }
+          else { label = 'EXTREME GREED'; color = '#00ff9f'; }
+
+          fngLabel.textContent = label;
+          fngLabel.style.color = color;
+          fngLabel.style.borderColor = color + '80';
+        }
+
+        const marker = document.getElementById('fng-marker');
+        if (marker) {
+          marker.style.left = `${value}%`;
+        }
+      }
 
       function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
@@ -1257,7 +1340,7 @@
           }
         }
         if (type === 'fng' && payload) {
-          updateGauge(payload.value);
+          updateFearGreed(payload.value);
         }
         if (type === 'saylor' && payload && saylorBtc) {
           animateCounter(saylorBtc, payload.btc);
@@ -1267,62 +1350,6 @@
           saylorUsd.textContent = '$' + (usd / 1e9).toFixed(2) + 'B';
         }
       });
-
-      // Gauge
-      function createGauge() {
-        if (!gaugeSvg) return;
-        gaugeSvg.innerHTML = `
-          <defs>
-            <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="coloredBlur"/>
-              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <linearGradient id="needleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#e0e7ff"/><stop offset="100%" stop-color="#00f9ff"/>
-            </linearGradient>
-          </defs>
-          <circle cx="105" cy="105" r="98" fill="none" stroke="#00f9ff" stroke-width="1" opacity="0.15"/>
-          
-          <!-- Precise color zones aligned to needle positions (-120° to +120°) -->
-          <!-- Extreme Fear (0-25%) red -->
-          <path d="M 61 28.79 A 88 88 0 0 1 149 28.79" fill="none" stroke="#ff0033" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          <!-- Fear (25-45%) orange -->
-          <path d="M 149 28.79 A 88 88 0 0 1 191.08 86.7" fill="none" stroke="#ff6600" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          <!-- Neutral (45-55%) yellow -->
-          <path d="M 191.08 86.7 A 88 88 0 0 1 191.08 123.3" fill="none" stroke="#ffd700" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          <!-- Greed (55-75%) cyan -->
-          <path d="M 191.08 123.3 A 88 88 0 0 1 149 181.21" fill="none" stroke="#00f9ff" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          <!-- Extreme Greed (75-100%) lime -->
-          <path d="M 149 181.21 A 88 88 0 0 1 61 181.21" fill="none" stroke="#00ff9f" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          
-          <g id="needle-group" class="gauge-needle" style="transition: transform 650ms cubic-bezier(0.23, 1.0, 0.32, 1);">
-            <!-- Longer, more visible needle -->
-            <line x1="105" y1="105" x2="105" y2="22" stroke="url(#needleGrad)" stroke-width="5" stroke-linecap="round"/>
-            <!-- Arrowhead tip -->
-            <polygon points="105,18 99,28 111,28" fill="#00f9ff" filter="url(#gaugeGlow)"/>
-            <circle cx="105" cy="105" r="7" fill="#111118" stroke="#00f9ff" stroke-width="2"/>
-            <circle cx="105" cy="105" r="3.5" fill="#e0e7ff"/>
-          </g>
-        `;
-      }
-
-      function updateGauge(value) {
-        if (!gaugeSvg) return;
-        const needle = gaugeSvg.querySelector('#needle-group');
-        if (!needle) return;
-        const angle = -120 + (value / 100) * 240;
-        needle.style.transform = `rotate(${angle}deg)`;
-        if (fngValue) fngValue.textContent = value;
-        if (fngLabel) {
-          let label = 'NEUTRAL', color = '#ffd700';
-          if (value <= 25) { label = 'EXTREME FEAR'; color = '#ff0033'; }
-          else if (value <= 45) { label = 'FEAR'; color = '#ff6600'; }
-          else if (value <= 55) { label = 'NEUTRAL'; color = '#ffd700'; }
-          else if (value <= 75) { label = 'GREED'; color = '#00f9ff'; }
-          else { label = 'EXTREME GREED'; color = '#00ff9f'; }
-          fngLabel.textContent = label; fngLabel.style.color = color;
-        }
-      }
 
       // Alien head
       function driveAlienHead() {
@@ -1410,16 +1437,18 @@
 
       // Init everything
       function initEffects() {
-        createGauge();
         initConfetti();
         driveAlienHead();
 
         setTimeout(() => {
-          updateGauge(23);
+          // Seed initial Fear & Greed visual
+          if (typeof updateFearGreed === 'function') {
+            updateFearGreed(23);
+          }
           if (saylorBtc) saylorBtc.textContent = '843,738';
         }, 600);
 
-        window.DASH._fx = { flashPrice, updateGauge, spawnConfetti: spawnConfettiBurst, showToast, animateCounter };
+        window.DASH._fx = { flashPrice, spawnConfetti: spawnConfettiBurst, showToast, animateCounter };
         console.log('%c[Animation] All cyberpunk effects active', 'color:#ff00aa');
       }
 
