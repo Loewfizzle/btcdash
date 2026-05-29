@@ -177,6 +177,18 @@
       letter-spacing: -1.5px;
     }
 
+    /* Consistent neon cyan glow on all major white data numbers */
+    #price-usd,
+    #saylor-btc,
+    #saylor-usd,
+    #hashrate,
+    #difficulty,
+    #halving-blocks {
+      text-shadow: 
+        0 0 6px rgba(0, 249, 255, 0.7),
+        0 0 16px rgba(0, 249, 255, 0.35);
+    }
+
     #fng-label {
       font-feature-settings: "tnum";
       letter-spacing: 1.5px;
@@ -637,7 +649,7 @@
         chart: 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily'
       };
 
-      // Multiple reliable price sources with automatic fallback (much more stable than single provider)
+      // Multiple reliable price sources with automatic fallback
       const PRICE_PROVIDERS = [
         {
           name: 'Binance',
@@ -653,6 +665,14 @@
           parse: (d) => ({
             usd: parseFloat(d.data.priceUsd),
             usd_24h_change: parseFloat(d.data.changePercent24Hr)
+          })
+        },
+        {
+          name: 'CryptoCompare',
+          url: 'https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD',
+          parse: (d) => ({
+            usd: d.USD,
+            usd_24h_change: undefined   // price only, keep previous change
           })
         }
       ];
@@ -1047,12 +1067,17 @@
           }
         }
 
-        if (data) {
+        if (data && data.usd) {
           recordFetchResult('price', true);
 
           const prev = window.DASH.price;
           window.DASH.price = data.usd;
-          window.DASH.priceChange = data.usd_24h_change;
+
+          // Only overwrite change if this provider gave us one
+          if (typeof data.usd_24h_change === 'number') {
+            window.DASH.priceChange = data.usd_24h_change;
+          }
+
           window.DASH.sats = Math.floor(data.usd * 100000000);
           window.DASH.prevPrice = prev;
           dispatchUpdate('price', window.DASH);
@@ -1310,7 +1335,7 @@
         updateChart();           // Fetch once on load (daily data doesn't need frequent refreshes)
         renderSaylorPurchases();
 
-        setInterval(updateLivePrice, 30000);      // 30s is still very live for price
+        setInterval(updateLivePrice, 45000);      // 45s strikes a good balance between "live" and not getting rate-limited by free APIs
         setInterval(updateFearGreed, 240000);
         setInterval(updateNetworkStats, 48000);
         // Chart = daily closes for last 30 days. No need for frequent "live" updates.
