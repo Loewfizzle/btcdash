@@ -342,7 +342,7 @@
           
           <!-- THE ALIEN HEAD (smaller on mobile to reduce crowding) -->
           <div class="inline-flex items-center justify-center mx-0.5 -mt-0.5 w-6 h-6 sm:w-8 sm:h-8 lg:w-[34px] lg:h-[34px] shrink-0">
-            <svg id="alien-head" width="42" height="42" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" class="alien-head pulse drop-shadow-[0_0_8px_#00f9ff]">
+            <svg id="alien-head" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" class="alien-head pulse drop-shadow-[0_0_8px_#00f9ff] w-full h-full">
               <defs>
                 <filter id="neonCyan" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="coloredBlur"/>
@@ -1500,10 +1500,15 @@
         const alien = document.getElementById('alien-head');
         if (!alien) return;
         alien.classList.add('pulse');
+
+        // Set initial colors explicitly
+        const orbs = alien.querySelectorAll('.alien-orb');
+        const pupils = alien.querySelectorAll('.alien-eye-slit');
+        orbs.forEach(o => o.setAttribute('fill', '#00f9ff'));
+        pupils.forEach(p => p.setAttribute('fill', '#00f9ff'));
+
         setInterval(() => {
           alien.classList.add('glitch');
-          const orbs = alien.querySelectorAll('.alien-orb');
-          const pupils = alien.querySelectorAll('.alien-eye-slit');
           const useCyan = Math.random() > 0.5;
           const color = useCyan ? '#00f9ff' : '#ff00aa';
           orbs.forEach(o => o.setAttribute('fill', color));
