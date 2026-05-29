@@ -368,7 +368,7 @@
         </div>
         <div class="text-xs text-[#00f9ff]/50 mono" id="last-sync">LAST SYNC — —</div>
         <button onclick="window.DASH?.recalibrate?.()" 
-                class="ml-2 sm:ml-3 px-2.5 py-1 sm:px-3 sm:py-1.5 text-[9px] sm:text-[10px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95">
+                class="ml-2 sm:ml-3 px-2.5 py-1 sm:px-3 sm:py-1.5 min-h-[28px] sm:min-h-[32px] text-[9px] sm:text-[10px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95 touch-manipulation">
           RECALIBRATE
         </button>
       </div>
@@ -427,7 +427,7 @@
       </div>
 
       <!-- SAYLOR'S WAR CHEST -->
-      <div class="lg:col-span-4 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col">
+      <div class="lg:col-span-4 holo-card rounded-2xl p-3 sm:p-5 lg:p-6 flex flex-col">
         <div class="flex items-center justify-between">
           <div>
             <div class="section-title">STRATEGY BITCOIN RESERVE</div>
@@ -618,6 +618,8 @@
 
         if (!active) {
           banner.classList.add('hidden');
+          banner.style.borderColor = '#ff0033';
+          banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
           return;
         }
 
@@ -631,8 +633,13 @@
         let message = 'SIM MODE — NEURAL UPLINK DEGRADED';
         if (degraded.length > 0) {
           message += ` • ${degraded.join(' + ')} using cached data`;
+          // Visually distinct for partial vs full degradation
+          banner.style.borderColor = '#ffaa00';
+          banner.style.background = 'linear-gradient(to right, #2a1a00, #1a1200)';
         } else {
           message += ' • USING CURATED MOCK DATA';
+          banner.style.borderColor = '#ff0033';
+          banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
         }
 
         banner.textContent = message;
@@ -686,15 +693,36 @@
       window.DASH.health = endpointHealth;
 
       function getDataAge(key) {
-        const ts = endpointHealth[key]?.lastSuccess || 0;
+        const health = endpointHealth[key] || {};
+        const ts = health.lastSuccess || 0;
+
         if (!ts) return { text: 'no data', color: '#ff0033' };
 
         const ageSec = Math.floor((Date.now() - ts) / 1000);
+        const isRetrying = health.failures > 0 && health.nextRetry > Date.now();
 
-        if (ageSec < 90)  return { text: 'just now', color: '#00ff9f' };
-        if (ageSec < 300) return { text: `${Math.floor(ageSec/60)}m ago`, color: '#00ff9f' };
-        if (ageSec < 600) return { text: `${Math.floor(ageSec/60)}m ago`, color: '#ffd700' };
-        return { text: `${Math.floor(ageSec/60)}m ago`, color: '#ff6600' };
+        let text, color;
+
+        if (ageSec < 90) {
+          text = 'just now';
+          color = '#00ff9f';
+        } else if (ageSec < 300) {
+          text = `${Math.floor(ageSec/60)}m ago`;
+          color = '#00ff9f';
+        } else if (ageSec < 600) {
+          text = `${Math.floor(ageSec/60)}m ago`;
+          color = '#ffd700';
+        } else {
+          text = `${Math.floor(ageSec/60)}m ago`;
+          color = '#ff6600';
+        }
+
+        if (isRetrying) {
+          text += ' (retrying)';
+          color = '#ffaa00';
+        }
+
+        return { text, color };
       }
 
       function updateLoadingIndicators() {
@@ -1356,6 +1384,15 @@
       }
 
       initEffects();
+
+      // Keyboard shortcut for RECALIBRATE (R key) - Nice-to-have polish
+      document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'r' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+          if (window.DASH?.recalibrate) {
+            window.DASH.recalibrate();
+          }
+        }
+      });
     })();
   </script>
 </body>
