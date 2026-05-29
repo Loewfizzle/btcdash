@@ -571,12 +571,31 @@
       }
 
       function updateLastSync() {
-        window.DASH.lastSync = new Date();
+        const now = Date.now();
+        window.DASH.lastSync = new Date(now);
+
+        const critical = ['price', 'fng', 'network'];
+        let oldestSuccess = now;
+
+        critical.forEach(key => {
+          const ts = endpointHealth[key]?.lastSuccess || 0;
+          if (ts > 0 && ts < oldestSuccess) oldestSuccess = ts;
+        });
+
+        const ageSeconds = Math.floor((now - oldestSuccess) / 1000);
         const el = document.getElementById('last-sync');
+
         if (el) {
-          el.textContent = 'LAST SYNC — ' + window.DASH.lastSync.toLocaleTimeString([], { 
+          let text = 'LAST SYNC — ' + new Date(now).toLocaleTimeString([], { 
             hour: '2-digit', minute: '2-digit', second: '2-digit' 
           });
+
+          if (ageSeconds > 90) {
+            const ageMin = Math.floor(ageSeconds / 60);
+            text += `  (some data ~${ageMin}m old)`;
+          }
+
+          el.textContent = text;
         }
       }
 
@@ -588,10 +607,10 @@
 
       // === Live Data Robustness: Endpoint Health Tracking ===
       const endpointHealth = {
-        price:     { failures: 0, nextRetry: 0 },
-        fng:       { failures: 0, nextRetry: 0 },
-        network:   { failures: 0, nextRetry: 0 },
-        chart:     { failures: 0, nextRetry: 0 }
+        price:     { failures: 0, nextRetry: 0, lastSuccess: 0 },
+        fng:       { failures: 0, nextRetry: 0, lastSuccess: 0 },
+        network:   { failures: 0, nextRetry: 0, lastSuccess: 0 },
+        chart:     { failures: 0, nextRetry: 0, lastSuccess: 0 }
       };
 
       const MAX_BACKOFF = 5 * 60 * 1000; // 5 minutes max
@@ -606,6 +625,7 @@
         if (success) {
           health.failures = 0;
           health.nextRetry = 0;
+          health.lastSuccess = Date.now();
         } else {
           health.failures = Math.min(health.failures + 1, 6);
           const backoffMs = Math.min(1000 * Math.pow(2, health.failures), MAX_BACKOFF);
@@ -850,6 +870,13 @@
       setTimeout(() => {
         startLiveUpdates();
       }, 400);
+
+      // Periodically refresh the "data age" display even when no new fetches succeed
+      setInterval(() => {
+        if (document.getElementById('last-sync')) {
+          updateLastSync();
+        }
+      }, 30000); // every 30 seconds
 
       window.DASH.recalibrate = function() {
         // Reset all backoffs so user can force an immediate retry
