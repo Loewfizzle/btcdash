@@ -17,7 +17,7 @@
   - Fully responsive (desktop + mobile)
   
   Tech: Single-file HTML + Tailwind (CDN) + Chart.js (CDN) + Vanilla JS
-  Data Sources: CoinGecko, Mempool.space, Alternative.me
+  Data Sources: Binance + CoinCap (price), Mempool.space (network), Alternative.me (Fear & Greed)
   
   For authorized megacorp personnel only.
 -->
@@ -415,7 +415,7 @@
 
       <!-- LIVE BITCOIN PRICE -->
       <div class="lg:col-span-5 holo-card rounded-2xl p-5 sm:p-6 lg:p-8 flex flex-col justify-center">
-        <div class="section-title mb-3">LIVE NEURAL FEED • COINGECKO</div>
+        <div class="section-title mb-3">LIVE NEURAL FEED • MULTI-ORACLE</div>
         
         <div class="flex items-baseline gap-3">
           <div>
@@ -631,12 +631,31 @@
       // =====================================================
 
       const API = {
-        price: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
         fearGreed: 'https://api.alternative.me/fng/',
         blockHeight: 'https://mempool.space/api/blocks/tip/height',
         hashrate: 'https://mempool.space/api/v1/mining/hashrate/1m',
         chart: 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily'
       };
+
+      // Multiple reliable price sources with automatic fallback (much more stable than single provider)
+      const PRICE_PROVIDERS = [
+        {
+          name: 'Binance',
+          url: 'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT',
+          parse: (d) => ({
+            usd: parseFloat(d.lastPrice),
+            usd_24h_change: parseFloat(d.priceChangePercent)
+          })
+        },
+        {
+          name: 'CoinCap',
+          url: 'https://api.coincap.io/v2/assets/bitcoin',
+          parse: (d) => ({
+            usd: parseFloat(d.data.priceUsd),
+            usd_24h_change: parseFloat(d.data.changePercent24Hr)
+          })
+        }
+      ];
 
       let chartInstance = null;
       let saylorPurchases = [
@@ -994,8 +1013,26 @@
       }
 
       async function updateLivePrice() {
-        const data = await fetchWithFallback(API.price, 'price', d => d.bitcoin);
+        let data = null;
+        let providerName = null;
+
+        // Try providers in order until one succeeds (major improvement in reliability)
+        for (const provider of PRICE_PROVIDERS) {
+          try {
+            const res = await fetchWithTimeout(provider.url, 8000);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const json = await res.json();
+            data = provider.parse(json);
+            providerName = provider.name;
+            break;
+          } catch (err) {
+            console.warn(`[Price] ${provider.name} failed:`, err.message || err);
+          }
+        }
+
         if (data) {
+          recordFetchResult('price', true);
+
           const prev = window.DASH.price;
           window.DASH.price = data.usd;
           window.DASH.priceChange = data.usd_24h_change;
@@ -1003,7 +1040,10 @@
           window.DASH.prevPrice = prev;
           dispatchUpdate('price', window.DASH);
           updateFreshnessIndicators();
+        } else {
+          recordFetchResult('price', false);
         }
+
         updateLastSync();
       }
 
