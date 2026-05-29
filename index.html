@@ -17,7 +17,7 @@
   - Fully responsive (desktop + mobile)
   
   Tech: Single-file HTML + Tailwind (CDN) + Chart.js (CDN) + Vanilla JS
-  Data Sources: CoinGecko, Mempool.space, Alternative.me
+  Data Sources: Binance + CoinCap (price), Mempool.space (network), Alternative.me (Fear & Greed)
   
   For authorized megacorp personnel only.
 -->
@@ -170,9 +170,28 @@
       transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
-    /* === GAUGE STYLING === */
-    .gauge-svg {
-      filter: drop-shadow(0 0 12px rgba(0, 249, 255, 0.2));
+    #fng-value {
+      text-shadow: 
+        0 0 6px rgba(0, 249, 255, 0.7),
+        0 0 16px rgba(0, 249, 255, 0.35);
+      letter-spacing: -1.5px;
+    }
+
+    /* Consistent neon cyan glow on all major white data numbers */
+    #price-usd,
+    #saylor-btc,
+    #saylor-usd,
+    #hashrate,
+    #difficulty,
+    #halving-blocks {
+      text-shadow: 
+        0 0 6px rgba(0, 249, 255, 0.7),
+        0 0 16px rgba(0, 249, 255, 0.35);
+    }
+
+    #fng-label {
+      font-feature-settings: "tnum";
+      letter-spacing: 1.5px;
     }
 
     /* === ALIEN HEAD === */
@@ -233,33 +252,6 @@
       100% { transform: translateX(0); }
     }
 
-    /* === SAYLOR ACQUIRE BUTTON === */
-    .acquire-btn {
-      position: relative;
-      overflow: hidden;
-      transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-      border: 1px solid rgba(255, 215, 0, 0.5);
-    }
-
-    .acquire-btn:hover {
-      background: rgba(255, 215, 0, 0.1);
-      box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
-      border-color: #ffd700;
-    }
-
-    .acquire-btn::after {
-      content: '';
-      position: absolute;
-      inset: -50% -100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-      transform: skewX(-25deg);
-      transition: left 0.6s;
-    }
-
-    .acquire-btn:hover::after {
-      left: 200%;
-    }
-
     /* === TOAST === */
     .neural-toast {
       animation: toast-slide 0.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
@@ -278,6 +270,11 @@
       background: linear-gradient(to right, #3b0a0a, #2a1a00);
       border: 1px solid #ff0033;
       color: #ffaa00;
+    }
+
+    #data-mode-indicator {
+      transition: color 0.2s ease, border-color 0.2s ease;
+      font-feature-settings: "tnum";
     }
 
     /* Stale data visual treatment */
@@ -321,10 +318,7 @@
       transition: opacity 0.2s ease;
     }
 
-    .gauge-needle {
-      transform-origin: 50% 50%;
-      transform-box: fill-box;
-    }
+
   </style>
 </head>
 <body class="neural-bg text-[#e0e7ff] overflow-x-hidden">
@@ -334,21 +328,21 @@
   <!-- Subtle digital grid -->
   <div class="fixed inset-0 grid-overlay z-0"></div>
 
-  <!-- SIM MODE BANNER -->
-  <div id="sim-banner" class="hidden fixed top-0 left-0 right-0 z-[200] sim-banner text-center py-1 text-xs tracking-[2px] font-medium">
-    SIM MODE — NEURAL UPLINK DEGRADED • USING CURATED MOCK DATA
+  <!-- SIM MODE BANNER (only visible on real degradation) -->
+  <div id="sim-banner" class="hidden fixed top-0 left-0 right-0 z-[200] sim-banner text-center py-1 text-xs tracking-[1px] font-medium">
+    LIVE FEED TEMPORARILY DEGRADED — showing cached data • Tap RECAL to retry
   </div>
 
   <!-- HEADER -->
   <header class="relative z-50 border-b border-white/10 bg-[#050508]/90 backdrop-blur-xl">
-    <div class="max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 overflow-hidden">
-      <!-- Logo with Alien Head "O" -->
-      <div class="flex items-center gap-2 min-w-0">
-        <div class="flex items-center text-2xl sm:text-3xl lg:text-4xl font-black tracking-[-2px] sm:tracking-[-2.5px] min-w-0">
+    <div class="max-w-[1480px] mx-auto px-3 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-x-3 gap-y-1 py-2 sm:py-2.5">
+      <!-- Logo + subtitle (compact, no overlap) -->
+      <div class="flex flex-col min-w-0">
+        <div class="flex items-center text-[20px] leading-none xs:text-[22px] sm:text-3xl lg:text-4xl font-black tracking-[-1.5px] min-w-0">
           <span class="text-white shrink-0">L</span>
           
-          <!-- THE ALIEN HEAD -->
-          <div class="inline-flex items-center justify-center mx-0.5 -mt-1 w-7 h-7 sm:w-8 sm:h-8 lg:w-[34px] lg:h-[34px] shrink-0">
+          <!-- THE ALIEN HEAD (smaller on mobile to reduce crowding) -->
+          <div class="inline-flex items-center justify-center mx-0.5 -mt-0.5 w-6 h-6 sm:w-8 sm:h-8 lg:w-[34px] lg:h-[34px] shrink-0">
             <svg id="alien-head" width="42" height="42" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" class="alien-head pulse drop-shadow-[0_0_8px_#00f9ff]">
               <defs>
                 <filter id="neonCyan" x="-50%" y="-50%" width="200%" height="200%">
@@ -398,17 +392,28 @@
 
           <span class="text-white">EWFIZZLE'S</span>
         </div>
-        <div class="text-[11px] font-medium tracking-[3px] text-[#00f9ff]/60 -ml-1 mt-1">BITCOIN DASHBOARD</div>
+        <!-- Smaller subtitle on mobile so it never crowds or sits behind logo text -->
+        <div class="text-[8px] sm:text-[9px] lg:text-[10px] leading-none font-medium tracking-[1px] text-[#00f9ff]/55 mt-0.5">BITCOIN DASHBOARD</div>
       </div>
 
-      <div class="flex items-center gap-2 sm:gap-4 min-w-0">
-        <div class="hidden sm:flex items-center gap-2 px-2 sm:px-3 py-1 rounded bg-white/5 border border-white/10">
-          <div class="w-2 h-2 bg-[#00ff9f] rounded-full animate-pulse"></div>
-          <span class="text-[10px] sm:text-xs tracking-[1px] text-[#00ff9f]/80 font-medium">NEURAL LINK STABLE</span>
+      <!-- Right controls: compact on mobile, no horizontal overflow -->
+      <div class="flex items-center gap-1 sm:gap-2 min-w-0 w-full sm:w-auto justify-end">
+        <!-- Neural pill hidden below md to fight crowding -->
+        <div class="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/5 border border-white/10">
+          <div class="w-1.5 h-1.5 bg-[#00ff9f] rounded-full animate-pulse"></div>
+          <span class="text-[9px] tracking-[0.5px] text-[#00ff9f]/70 font-medium">NEURAL LINK STABLE</span>
         </div>
-        <div class="text-[10px] sm:text-xs text-[#00f9ff]/50 mono truncate" id="last-sync">LAST SYNC — —</div>
+
+        <!-- LIVE / SIM indicator (the key visual fix for "says sim mode not live data") -->
+        <div id="data-mode-indicator"
+             class="flex items-center text-[9px] sm:text-[10px] font-mono tracking-[1.5px] px-1.5 py-px rounded border bg-white/5 border-[#00ff9f]/40 text-[#00ff9f]/80">
+          LIVE
+        </div>
+
+        <div class="text-[9px] sm:text-[10px] text-[#00f9ff]/50 mono truncate max-w-[78px] sm:max-w-none" id="last-sync">SYNC — —</div>
+
         <button onclick="window.DASH?.recalibrate?.()" 
-                class="ml-1 px-2 py-1 sm:px-2.5 sm:py-1 text-[8px] sm:text-[10px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95 touch-manipulation whitespace-nowrap">
+                class="px-2 py-1 text-[8px] sm:text-[9px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95 touch-manipulation whitespace-nowrap">
           RECAL
         </button>
       </div>
@@ -422,7 +427,7 @@
 
       <!-- LIVE BITCOIN PRICE -->
       <div class="lg:col-span-5 holo-card rounded-2xl p-5 sm:p-6 lg:p-8 flex flex-col justify-center">
-        <div class="section-title mb-3">LIVE NEURAL FEED • COINGECKO</div>
+        <div class="section-title mb-3">LIVE NEURAL FEED • MULTI-ORACLE</div>
         
         <div class="flex items-baseline gap-3">
           <div>
@@ -438,30 +443,56 @@
           </div>
           <div class="text-[#00f9ff]/50 text-sm">24H</div>
         </div>
-
-        <div class="mt-4 text-sm text-[#00f9ff]/70 mono">
-          <span id="price-sats">1,000,000 sats</span>
-          <span class="text-white/30 mx-2">•</span>
-          <span class="text-xs">PER BTC</span>
-          <span id="price-freshness" class="ml-3 text-[10px] text-[#00ff9f]/60 mono"></span>
-        </div>
       </div>
 
-      <!-- FEAR & GREED GAUGE -->
-      <div class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col items-center">
+      <!-- FEAR & GREED INDEX -->
+      <div class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col">
         <div class="flex items-center justify-between w-full">
           <div class="section-title">FEAR &amp; GREED INDEX</div>
           <span id="fng-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
         </div>
-        
-        <div class="relative w-[160px] h-[160px] sm:w-[190px] sm:h-[190px] lg:w-[210px] lg:h-[210px] mt-1">
-          <svg id="fng-gauge" width="100%" height="100%" viewBox="0 0 210 210" class="gauge-svg" style="max-width: 210px; max-height: 210px;">
-            <!-- Populated by Animation Agent -->
-          </svg>
-          
-          <div class="absolute inset-0 flex flex-col items-center justify-center pt-3">
-            <div id="fng-value" class="text-6xl font-black mono tracking-tighter">23</div>
-            <div id="fng-label" class="text-xs tracking-[2px] font-semibold text-[#ff0033] mt-0.5">EXTREME FEAR</div>
+
+        <!-- Big value + classification -->
+        <div class="text-center my-3">
+          <div id="fng-value" class="text-6xl sm:text-7xl font-black mono tracking-[-2.5px]">23</div>
+          <div id="fng-label" 
+               class="mt-1 inline-block px-3 py-px text-[10px] tracking-[2px] font-semibold border border-current/50 rounded bg-black/40">EXTREME FEAR</div>
+        </div>
+
+        <!-- Cyberpunk Horizontal Sentiment Spectrum -->
+        <div class="mt-auto w-full">
+          <div class="relative h-[20px] rounded bg-[#0a0a12] border border-white/10 overflow-hidden">
+            <!-- 5 colored zones (proportional to index ranges) -->
+            <div class="absolute inset-0 flex">
+              <div style="width:25%; background:#ff0033; opacity:0.85;"></div>
+              <div style="width:20%; background:#ff6600; opacity:0.85;"></div>
+              <div style="width:10%; background:#ffd700; opacity:0.85;"></div>
+              <div style="width:20%; background:#00f9ff; opacity:0.85;"></div>
+              <div style="width:25%; background:#00ff9f; opacity:0.85;"></div>
+            </div>
+
+            <!-- Subtle cyberpunk scan/grid overlay -->
+            <div class="absolute inset-0 pointer-events-none"
+                 style="background: repeating-linear-gradient(90deg, rgba(0,249,255,0.06) 0px, rgba(0,249,255,0.06) 1px, transparent 1px, transparent 7px);"></div>
+
+            <!-- Glowing data probe / sliding marker -->
+            <div id="fng-marker" 
+                 class="absolute top-[-1px] bottom-[-1px] w-[4px] transition-all duration-[650ms] ease-out flex items-center justify-center"
+                 style="left: 23%;">
+              <!-- Vertical neon beam -->
+              <div class="w-[1.5px] h-full bg-white shadow-[0_0_8px_#00f9ff,0_0_18px_#00f9ff]"></div>
+              <!-- Bright sensor node -->
+              <div class="absolute w-[9px] h-[9px] rounded-full border border-[#00f9ff] bg-[#050508] shadow-[0_0_6px_#00f9ff,0_0_12px_#00f9ff]"></div>
+            </div>
+          </div>
+
+          <!-- Scale ticks -->
+          <div class="flex text-[7px] text-white/20 justify-between mt-1 px-0.5 font-mono tracking-[1.5px]">
+            <div>0</div>
+            <div>25</div>
+            <div>50</div>
+            <div>75</div>
+            <div>100</div>
           </div>
         </div>
       </div>
@@ -470,7 +501,7 @@
       <div class="lg:col-span-4 holo-card rounded-2xl p-3 sm:p-4 lg:p-6 flex flex-col text-sm sm:text-base">
         <div class="flex items-center justify-between">
           <div>
-            <div class="section-title">STRATEGY BITCOIN RESERVE</div>
+            <div class="section-title">SAYLOR'S WAR CHEST</div>
             <div class="text-amber-400/90 text-xs tracking-widest">MICROSTRATEGY • PUBLIC DISCLOSURES</div>
           </div>
           <div class="text-right">
@@ -486,11 +517,6 @@
           </div>
           <div id="saylor-usd" class="text-2xl font-semibold mono text-white/90 data-value mt-0.5">$61.84B</div>
         </div>
-
-        <button id="acquire-btn" class="acquire-btn mt-6 w-full py-3.5 rounded-xl bg-black/40 text-[#ffd700] font-semibold tracking-[1.5px] text-sm active:scale-[0.985] transition">
-          ACQUIRE MORE BTC
-        </button>
-        <div class="text-[10px] text-center text-white/30 mt-2 tracking-wide">NEURAL UPLINK • INSTANT SETTLEMENT</div>
       </div>
     </div>
 
@@ -500,7 +526,7 @@
         <div class="flex items-center gap-3">
           <div>
             <div class="section-title">30-DAY PRICE TRAJECTORY</div>
-            <div class="text-xs text-white/40">COINGECKO • DAILY CLOSE</div>
+            <div class="text-xs text-white/40">MULTI-ORACLE • DAILY CLOSE</div>
           </div>
           <span id="chart-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
         </div>
@@ -550,7 +576,7 @@
         <div class="section-title">RECENT ACQUISITIONS — STRATEGY</div>
         <div class="text-[10px] text-white/40">UPDATED WITH LIVE BTC PRICE</div>
       </div>
-      <div id="saylor-purchases" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 text-[10px] sm:text-xs lg:text-sm">
+      <div id="saylor-purchases" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-2 sm:gap-3 text-[10px] sm:text-xs lg:text-sm">
         <!-- Populated by Core Logic -->
       </div>
     </div>
@@ -603,25 +629,8 @@
         chartData: null,
         saylor: { btc: 843738, avgCost: 41820 },
         lastSync: null,
-        isSimMode: true
+        isSimMode: false
       };
-
-      const simBanner = document.getElementById('sim-banner');
-
-      function setSimMode(active) {
-        window.DASH.isSimMode = active;
-        if (simBanner) simBanner.classList.toggle('hidden', !active);
-      }
-
-      function updateLastSync() {
-        window.DASH.lastSync = new Date();
-        const el = document.getElementById('last-sync');
-        if (el) {
-          el.textContent = 'LAST SYNC — ' + window.DASH.lastSync.toLocaleTimeString([], { 
-            hour: '2-digit', minute: '2-digit', second: '2-digit' 
-          });
-        }
-      }
 
       function dispatchUpdate(type, payload) {
         window.dispatchEvent(new CustomEvent('dashboard:update', {
@@ -634,56 +643,124 @@
       // =====================================================
 
       const API = {
-        price: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
         fearGreed: 'https://api.alternative.me/fng/',
         blockHeight: 'https://mempool.space/api/blocks/tip/height',
         hashrate: 'https://mempool.space/api/v1/mining/hashrate/1m',
         chart: 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily'
       };
 
+      // Multiple reliable price sources with automatic fallback
+      const PRICE_PROVIDERS = [
+        {
+          name: 'Binance',
+          url: 'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT',
+          parse: (d) => ({
+            usd: parseFloat(d.lastPrice),
+            usd_24h_change: parseFloat(d.priceChangePercent)
+          })
+        },
+        {
+          name: 'CoinCap',
+          url: 'https://api.coincap.io/v2/assets/bitcoin',
+          parse: (d) => ({
+            usd: parseFloat(d.data.priceUsd),
+            usd_24h_change: parseFloat(d.data.changePercent24Hr)
+          })
+        },
+        {
+          name: 'CryptoCompare',
+          url: 'https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD',
+          parse: (d) => ({
+            usd: d.USD,
+            usd_24h_change: undefined   // price only, keep previous change
+          })
+        }
+      ];
+
+      // Chart data providers (fallback for when CoinGecko is rate-limited or blocked)
+      const CHART_PROVIDERS = [
+        {
+          name: 'CoinGecko',
+          url: 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily',
+          parse: (d) => d.prices || []
+        },
+        {
+          name: 'CoinCap',
+          url: 'https://api.coincap.io/v2/assets/bitcoin/history?interval=d1',
+          parse: (d) => {
+            const arr = (d.data || []).slice(-30); // last ~30 days
+            return arr.map(item => [item.time, parseFloat(item.priceUsd)]);
+          }
+        }
+      ];
+
       let chartInstance = null;
       let saylorPurchases = [
+        { date: '2026-05-02', btc: 14200, usd: 1.05e9 },
+        { date: '2026-04-21', btc: 8750, usd: 638000000 },
         { date: '2026-04-12', btc: 12450, usd: 912000000 },
         { date: '2026-03-28', btc: 9800, usd: 712000000 },
         { date: '2026-03-05', btc: 15720, usd: 1.12e9 },
         { date: '2026-02-19', btc: 8300, usd: 598000000 },
         { date: '2026-02-03', btc: 11200, usd: 795000000 },
-        { date: '2026-01-15', btc: 9500, usd: 682000000 }
+        { date: '2026-01-15', btc: 9500, usd: 682000000 },
+        { date: '2025-12-29', btc: 6800, usd: 482000000 },
+        { date: '2025-12-08', btc: 10350, usd: 721000000 }
       ];
 
       function setSimMode(active) {
         window.DASH.isSimMode = active;
+        updateDataModeIndicator(active);
+
         const banner = document.getElementById('sim-banner');
         if (!banner) return;
 
         if (!active) {
           banner.classList.add('hidden');
-          banner.style.borderColor = '#ff0033';
-          banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
           return;
         }
 
-        // Build a more informative message
-        const degraded = [];
-        if (endpointHealth.price.failures > 0) degraded.push('Price');
-        if (endpointHealth.fng.failures > 0) degraded.push('F&G');
-        if (endpointHealth.network.failures > 0) degraded.push('Network');
-        if (endpointHealth.chart.failures > 0) degraded.push('Chart');
+        // Much calmer messaging — only critical feeds matter now
+        const priceHealth = endpointHealth.price;
+        const fngHealth = endpointHealth.fng;
 
-        let message = 'SIM MODE — NEURAL UPLINK DEGRADED';
-        if (degraded.length > 0) {
-          message += ` • ${degraded.join(' + ')} using cached data`;
-          // Visually distinct for partial vs full degradation
+        let message = 'LIVE FEED TEMPORARILY DEGRADED';
+        if (priceHealth.failures >= 2 || fngHealth.failures >= 2) {
+          message += ' — showing last cached values while recovering';
           banner.style.borderColor = '#ffaa00';
           banner.style.background = 'linear-gradient(to right, #2a1a00, #1a1200)';
         } else {
-          message += ' • USING CURATED MOCK DATA';
+          message += ' — using curated fallback';
           banner.style.borderColor = '#ff0033';
           banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
         }
 
         banner.textContent = message;
         banner.classList.remove('hidden');
+      }
+
+      // Smarter LIVE pill: stay "LIVE" if price has succeeded recently, even if other things are noisy
+      function updateDataModeIndicator(isSim) {
+        const ind = document.getElementById('data-mode-indicator');
+        if (!ind) return;
+
+        const priceAge = endpointHealth.price?.lastSuccess || 0;
+        const isPriceFresh = priceAge && (Date.now() - priceAge < 3 * 60 * 1000); // 3 minutes
+
+        if (!isSim && isPriceFresh) {
+          ind.textContent = 'LIVE';
+          ind.style.borderColor = 'rgba(0, 255, 159, 0.4)';
+          ind.style.color = 'rgba(0, 255, 159, 0.85)';
+        } else if (isSim) {
+          ind.textContent = 'SIM';
+          ind.style.borderColor = '#ffaa00';
+          ind.style.color = '#ffaa00';
+        } else {
+          // Rare transitional state
+          ind.textContent = 'LIVE';
+          ind.style.borderColor = 'rgba(0, 255, 159, 0.4)';
+          ind.style.color = 'rgba(0, 255, 159, 0.85)';
+        }
       }
 
       function updateLastSync() {
@@ -702,13 +779,13 @@
         const el = document.getElementById('last-sync');
 
         if (el) {
-          let text = 'LAST SYNC — ' + new Date(now).toLocaleTimeString([], { 
+          let text = 'SYNC — ' + new Date(now).toLocaleTimeString([], { 
             hour: '2-digit', minute: '2-digit', second: '2-digit' 
           });
 
           if (ageSeconds > 90) {
             const ageMin = Math.floor(ageSeconds / 60);
-            text += `  (some data ~${ageMin}m old)`;
+            text += ` (~${ageMin}m)`;
           }
 
           el.textContent = text;
@@ -919,6 +996,17 @@
         }
       }
 
+      // Simple timeout wrapper for fetch (prevents long hangs on flaky public APIs)
+      function fetchWithTimeout(url, timeoutMs = 9500) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { 
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' } 
+        })
+          .finally(() => clearTimeout(timer));
+      }
+
       // Real fetch with fallback + backoff
       async function fetchWithFallback(url, key, parser) {
         if (shouldSkipFetch(key)) {
@@ -929,7 +1017,7 @@
         updateLoadingIndicators();
 
         try {
-          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const res = await fetchWithTimeout(url);
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
 
@@ -937,9 +1025,10 @@
           refreshingSources.delete(key);
           updateLoadingIndicators();
 
-          // Only clear global SIM MODE if *all* endpoints are healthy
-          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
-          setSimMode(anyFailing);
+          // Only price and F&G control the global banner. Success on either clears it.
+          if (key === 'price' || key === 'fng') {
+            setSimMode(false);
+          }
 
           return parser(data);
         } catch (err) {
@@ -947,22 +1036,56 @@
           recordFetchResult(key, false);
           refreshingSources.delete(key);
           updateLoadingIndicators();
-          setSimMode(true);
+
+          // Only promote to visible "degraded" banner on *sustained* failures of critical feeds
+          if (key === 'price' || key === 'fng') {
+            const health = endpointHealth[key];
+            if (health.failures >= 2) {
+              setSimMode(true);
+            }
+          }
+          // Network and chart failures never force the top banner anymore
           return null;
         }
       }
 
       async function updateLivePrice() {
-        const data = await fetchWithFallback(API.price, 'price', d => d.bitcoin);
-        if (data) {
+        let data = null;
+        let providerName = null;
+
+        // Try providers in order until one succeeds (major improvement in reliability)
+        for (const provider of PRICE_PROVIDERS) {
+          try {
+            const res = await fetchWithTimeout(provider.url, 8000);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const json = await res.json();
+            data = provider.parse(json);
+            providerName = provider.name;
+            break;
+          } catch (err) {
+            console.warn(`[Price] ${provider.name} failed:`, err.message || err);
+          }
+        }
+
+        if (data && data.usd) {
+          recordFetchResult('price', true);
+
           const prev = window.DASH.price;
           window.DASH.price = data.usd;
-          window.DASH.priceChange = data.usd_24h_change;
+
+          // Only overwrite change if this provider gave us one
+          if (typeof data.usd_24h_change === 'number') {
+            window.DASH.priceChange = data.usd_24h_change;
+          }
+
           window.DASH.sats = Math.floor(data.usd * 100000000);
           window.DASH.prevPrice = prev;
           dispatchUpdate('price', window.DASH);
           updateFreshnessIndicators();
+        } else {
+          recordFetchResult('price', false);
         }
+
         updateLastSync();
       }
 
@@ -1005,15 +1128,14 @@
           };
 
           recordFetchResult('network', true);
-          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
-          setSimMode(anyFailing);
+          // Network success does not affect the main LIVE/SIM banner
 
           dispatchUpdate('network', window.DASH.network);
           updateHalvingCountdown(height);
           updateFreshnessIndicators();
         } catch (e) {
           recordFetchResult('network', false);
-          setSimMode(true);
+          // Network blips no longer flip the global degraded banner (widget shows its own staleness)
         }
         updateLastSync();
       }
@@ -1057,16 +1179,19 @@
         // Clear previous content
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Cyberpunk "unavailable" styling
-        ctx.fillStyle = '#4a4a5a';
-        ctx.font = '600 15px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        // Much more visible cyberpunk unavailable message
+        ctx.fillStyle = '#8899aa';
+        ctx.font = '600 16px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
 
-        ctx.fillText('DATA UNAVAILABLE', centerX, centerY);
+        ctx.fillText('CHART DATA UNAVAILABLE', centerX, centerY - 8);
+        ctx.fillStyle = '#556677';
+        ctx.font = '500 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        ctx.fillText('All sources temporarily unreachable', centerX, centerY + 14);
       }
 
       async function updateChart() {
@@ -1075,79 +1200,94 @@
           return;
         }
 
-        try {
-          const data = await fetch(API.chart).then(r => r.json());
-          const prices = data.prices;
+        let prices = null;
+        let providerName = null;
 
-          window.DASH.chartData = prices;
+        // Try multiple chart sources (CoinGecko often flakes in production)
+        for (const provider of CHART_PROVIDERS) {
+          try {
+            const res = await fetchWithTimeout(provider.url, 10000);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const json = await res.json();
+            const parsed = provider.parse(json);
 
-          if (chartInstance) chartInstance.destroy();
-
-          const ctx = document.getElementById('price-chart');
-          if (!ctx) return;
-
-          chartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: prices.map(p => new Date(p[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
-              datasets: [{
-                label: 'BTC Price (USD)',
-                data: prices.map(p => p[1]),
-                borderColor: '#00f9ff',
-                borderWidth: 2.5,
-                tension: 0.35,
-                fill: true,
-                backgroundColor: 'rgba(0, 249, 255, 0.08)',
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                pointHoverBackgroundColor: '#ff00aa'
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: '#0a0a12',
-                  borderColor: '#00f9ff',
-                  borderWidth: 1,
-                  titleColor: '#00f9ff',
-                  bodyColor: '#e0e7ff',
-                  displayColors: false
-                }
-              },
-              scales: {
-                x: {
-                  grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
-                  ticks: { color: 'rgba(224, 231, 255, 0.6)', font: { size: 10 } }
-                },
-                y: {
-                  grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
-                  ticks: {
-                    color: 'rgba(224, 231, 255, 0.6)',
-                    font: { size: 10 },
-                    callback: v => '$' + (v / 1000) + 'k'
-                  }
-                }
-              },
-              elements: {
-                line: { tension: 0.35 },
-                point: { hitRadius: 20 }
-              }
+            if (parsed && parsed.length > 5) {
+              prices = parsed;
+              providerName = provider.name;
+              break;
             }
-          });
-
-          recordFetchResult('chart', true);
-          const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
-          setSimMode(anyFailing);
-          updateFreshnessIndicators();
-        } catch (e) {
-          recordFetchResult('chart', false);
-          setSimMode(true);
-          renderChartUnavailable();
-          console.warn('[Core] Chart load failed');
+          } catch (err) {
+            console.warn(`[Chart] ${provider.name} failed:`, err.message || err);
+          }
         }
+
+        if (!prices || prices.length < 5) {
+          recordFetchResult('chart', false);
+          renderChartUnavailable();
+          return;
+        }
+
+        window.DASH.chartData = prices;
+
+        if (chartInstance) chartInstance.destroy();
+
+        const ctx = document.getElementById('price-chart');
+        if (!ctx) return;
+
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: prices.map(p => new Date(p[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+            datasets: [{
+              label: 'BTC Price (USD)',
+              data: prices.map(p => p[1]),
+              borderColor: '#00f9ff',
+              borderWidth: 2.5,
+              tension: 0.35,
+              fill: true,
+              backgroundColor: 'rgba(0, 249, 255, 0.08)',
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointHoverBackgroundColor: '#ff00aa'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#0a0a12',
+                borderColor: '#00f9ff',
+                borderWidth: 1,
+                titleColor: '#00f9ff',
+                bodyColor: '#e0e7ff',
+                displayColors: false
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                ticks: { color: 'rgba(224, 231, 255, 0.6)', font: { size: 10 } }
+              },
+              y: {
+                grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                ticks: {
+                  color: 'rgba(224, 231, 255, 0.6)',
+                  font: { size: 10 },
+                  callback: v => '$' + (v / 1000) + 'k'
+                }
+              }
+            },
+            elements: {
+              line: { tension: 0.35 },
+              point: { hitRadius: 20 }
+            }
+          }
+        });
+
+        recordFetchResult('chart', true);
+        updateFreshnessIndicators();
       }
 
       // Saylor purchase grid
@@ -1157,7 +1297,7 @@
 
         container.innerHTML = '';
 
-        const recent = [...saylorPurchases].reverse().slice(0, 6);
+        const recent = [...saylorPurchases].slice(0, 10);
 
         recent.forEach(p => {
           const div = document.createElement('div');
@@ -1187,44 +1327,19 @@
         return window.DASH.saylor.btc;
       };
 
-      // Wire ACQUIRE button with processing state (Medium Priority)
-      const acquireBtnEl = document.getElementById('acquire-btn');
-      if (acquireBtnEl) {
-        acquireBtnEl.addEventListener('click', () => {
-          if (acquireBtnEl.disabled) return;
-
-          const originalText = acquireBtnEl.textContent;
-          acquireBtnEl.disabled = true;
-          acquireBtnEl.textContent = 'PROCESSING...';
-          acquireBtnEl.style.opacity = '0.7';
-
-          // Simulate network delay for realism (short)
-          setTimeout(() => {
-            const added = Math.floor(Math.random() * 20000) + 8000;
-            window.DASH.simulateSaylorPurchase(added);
-
-            // Visual effects are handled in Animation layer via events if needed
-            // For now we keep confetti in the animation side
-
-            acquireBtnEl.disabled = false;
-            acquireBtnEl.textContent = originalText;
-            acquireBtnEl.style.opacity = '1';
-          }, 420);
-        });
-      }
-
       // Main polling
       function startLiveUpdates() {
         updateLivePrice();
         updateFearGreed();
         updateNetworkStats();
-        updateChart();
+        updateChart();           // Fetch once on load (daily data doesn't need frequent refreshes)
         renderSaylorPurchases();
 
-        setInterval(updateLivePrice, 13000);
+        setInterval(updateLivePrice, 45000);      // 45s strikes a good balance between "live" and not getting rate-limited by free APIs
         setInterval(updateFearGreed, 240000);
         setInterval(updateNetworkStats, 48000);
-        setInterval(updateChart, 480000);
+        // Chart = daily closes for last 30 days. No need for frequent "live" updates.
+        // It only refreshes on initial load and when user clicks RECALIBRATE.
 
         updateLastSync();
         console.log('%c[Core Logic] Live Bitcoin data engine started', 'color:#00ff9f');
@@ -1232,6 +1347,7 @@
 
       // Initial boot
       setTimeout(() => {
+        updateDataModeIndicator(window.DASH.isSimMode);
         startLiveUpdates();
         updateFreshnessIndicators();
       }, 400);
@@ -1241,6 +1357,7 @@
         if (document.getElementById('last-sync')) {
           updateLastSync();
           updateFreshnessIndicators();
+          updateDataModeIndicator(window.DASH.isSimMode);
         }
       }, 30000); // every 30 seconds
 
@@ -1264,18 +1381,39 @@
       const priceEl = document.getElementById('price-usd');
       const changeEl = document.getElementById('price-change');
       const satsEl = document.getElementById('price-sats');
-      const gaugeSvg = document.getElementById('fng-gauge');
       const fngValue = document.getElementById('fng-value');
       const fngLabel = document.getElementById('fng-label');
       const saylorBtc = document.getElementById('saylor-btc');
       const saylorUsd = document.getElementById('saylor-usd');
-      const acquireBtn = document.getElementById('acquire-btn');
       const toastContainer = document.getElementById('toast-container');
       const fxCanvas = document.getElementById('fx-canvas');
 
       let confettiCtx = null;
       let particles = [];
       let animFrame = null;
+
+      // Cyberpunk Fear & Greed horizontal spectrum bar
+      function updateFearGreed(value) {
+        if (fngValue) fngValue.textContent = value;
+
+        if (fngLabel) {
+          let label = 'NEUTRAL', color = '#ffd700';
+          if (value <= 25) { label = 'EXTREME FEAR'; color = '#ff0033'; }
+          else if (value <= 45) { label = 'FEAR'; color = '#ff6600'; }
+          else if (value <= 55) { label = 'NEUTRAL'; color = '#ffd700'; }
+          else if (value <= 75) { label = 'GREED'; color = '#00f9ff'; }
+          else { label = 'EXTREME GREED'; color = '#00ff9f'; }
+
+          fngLabel.textContent = label;
+          fngLabel.style.color = color;
+          fngLabel.style.borderColor = color + '80';
+        }
+
+        const marker = document.getElementById('fng-marker');
+        if (marker) {
+          marker.style.left = `${value}%`;
+        }
+      }
 
       function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
@@ -1305,7 +1443,7 @@
           }
         }
         if (type === 'fng' && payload) {
-          updateGauge(payload.value);
+          updateFearGreed(payload.value);
         }
         if (type === 'saylor' && payload && saylorBtc) {
           animateCounter(saylorBtc, payload.btc);
@@ -1315,62 +1453,6 @@
           saylorUsd.textContent = '$' + (usd / 1e9).toFixed(2) + 'B';
         }
       });
-
-      // Gauge
-      function createGauge() {
-        if (!gaugeSvg) return;
-        gaugeSvg.innerHTML = `
-          <defs>
-            <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="coloredBlur"/>
-              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <linearGradient id="needleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#e0e7ff"/><stop offset="100%" stop-color="#00f9ff"/>
-            </linearGradient>
-          </defs>
-          <circle cx="105" cy="105" r="98" fill="none" stroke="#00f9ff" stroke-width="1" opacity="0.15"/>
-          
-          <!-- Precise color zones aligned to needle positions (-120° to +120°) -->
-          <!-- Extreme Fear (0-25%) red -->
-          <path d="M 61 28.79 A 88 88 0 0 1 149 28.79" fill="none" stroke="#ff0033" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          <!-- Fear (25-45%) orange -->
-          <path d="M 149 28.79 A 88 88 0 0 1 191.08 86.7" fill="none" stroke="#ff6600" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          <!-- Neutral (45-55%) yellow -->
-          <path d="M 191.08 86.7 A 88 88 0 0 1 191.08 123.3" fill="none" stroke="#ffd700" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          <!-- Greed (55-75%) cyan -->
-          <path d="M 191.08 123.3 A 88 88 0 0 1 149 181.21" fill="none" stroke="#00f9ff" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          <!-- Extreme Greed (75-100%) lime -->
-          <path d="M 149 181.21 A 88 88 0 0 1 61 181.21" fill="none" stroke="#00ff9f" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
-          
-          <g id="needle-group" class="gauge-needle" style="transition: transform 650ms cubic-bezier(0.23, 1.0, 0.32, 1);">
-            <!-- Longer, more visible needle -->
-            <line x1="105" y1="105" x2="105" y2="22" stroke="url(#needleGrad)" stroke-width="5" stroke-linecap="round"/>
-            <!-- Arrowhead tip -->
-            <polygon points="105,18 99,28 111,28" fill="#00f9ff" filter="url(#gaugeGlow)"/>
-            <circle cx="105" cy="105" r="7" fill="#111118" stroke="#00f9ff" stroke-width="2"/>
-            <circle cx="105" cy="105" r="3.5" fill="#e0e7ff"/>
-          </g>
-        `;
-      }
-
-      function updateGauge(value) {
-        if (!gaugeSvg) return;
-        const needle = gaugeSvg.querySelector('#needle-group');
-        if (!needle) return;
-        const angle = -120 + (value / 100) * 240;
-        needle.style.transform = `rotate(${angle}deg)`;
-        if (fngValue) fngValue.textContent = value;
-        if (fngLabel) {
-          let label = 'NEUTRAL', color = '#ffd700';
-          if (value <= 25) { label = 'EXTREME FEAR'; color = '#ff0033'; }
-          else if (value <= 45) { label = 'FEAR'; color = '#ff6600'; }
-          else if (value <= 55) { label = 'NEUTRAL'; color = '#ffd700'; }
-          else if (value <= 75) { label = 'GREED'; color = '#00f9ff'; }
-          else { label = 'EXTREME GREED'; color = '#00ff9f'; }
-          fngLabel.textContent = label; fngLabel.style.color = color;
-        }
-      }
 
       // Alien head
       function driveAlienHead() {
@@ -1456,26 +1538,20 @@
         setTimeout(() => { toast.style.transition = 'all 0.25s ease'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 2300);
       }
 
-      // Acquire button (visual effects only - logic now lives in Core)
-      function wireAcquire() {
-        if (!acquireBtn) return;
-        // The real logic is now handled in the Core Logic layer
-        // This just ensures the visual burst still works
-      }
-
       // Init everything
       function initEffects() {
-        createGauge();
         initConfetti();
         driveAlienHead();
-        wireAcquire();
 
         setTimeout(() => {
-          updateGauge(23);
+          // Seed initial Fear & Greed visual
+          if (typeof updateFearGreed === 'function') {
+            updateFearGreed(23);
+          }
           if (saylorBtc) saylorBtc.textContent = '843,738';
         }, 600);
 
-        window.DASH._fx = { flashPrice, updateGauge, spawnConfetti: spawnConfettiBurst, showToast, animateCounter };
+        window.DASH._fx = { flashPrice, spawnConfetti: spawnConfettiBurst, showToast, animateCounter };
         console.log('%c[Animation] All cyberpunk effects active', 'color:#ff00aa');
       }
 
