@@ -279,6 +279,19 @@
       opacity: 0.65;
     }
 
+    .chart-container.data-loading {
+      position: relative;
+    }
+
+    .chart-container.data-loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+      border-radius: 8px;
+    }
+
     #price-freshness,
     #fng-freshness,
     #network-freshness,
@@ -427,7 +440,7 @@
       </div>
 
       <!-- SAYLOR'S WAR CHEST -->
-      <div class="lg:col-span-4 holo-card rounded-2xl p-3 sm:p-5 lg:p-6 flex flex-col">
+      <div class="lg:col-span-4 holo-card rounded-2xl p-3 sm:p-4 lg:p-6 flex flex-col text-sm sm:text-base">
         <div class="flex items-center justify-between">
           <div>
             <div class="section-title">STRATEGY BITCOIN RESERVE</div>
@@ -473,7 +486,7 @@
 
     <!-- NETWORK STATS (moved beneath chart per user request) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div class="holo-card rounded-2xl p-6">
+      <div class="holo-card rounded-2xl p-6 hover:border-[#00f9ff]/40 transition">
         <div class="flex justify-between items-start">
           <div class="section-title">CURRENT HASH RATE</div>
           <span id="network-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
@@ -482,7 +495,7 @@
         <div id="hashrate-trend" class="text-xs text-[#00ff9f] mt-1">+7.2% (7D)</div>
       </div>
 
-      <div class="holo-card rounded-2xl p-6">
+      <div class="holo-card rounded-2xl p-6 hover:border-[#00f9ff]/40 transition">
         <div class="flex justify-between items-start">
           <div class="section-title">CURRENT DIFFICULTY</div>
           <span id="network-freshness2" class="text-[10px] text-[#00ff9f]/60 mono"></span>
@@ -494,7 +507,7 @@
         </div>
       </div>
 
-      <div class="holo-card rounded-2xl p-6 border-l-2 border-[#ff00aa]">
+      <div class="holo-card rounded-2xl p-6 border-l-2 border-[#ff00aa] hover:border-[#ff00aa]/70 transition">
         <div class="flex justify-between items-start">
           <div class="section-title text-[#ff00aa]">NEXT HALVING</div>
           <span id="network-freshness3" class="text-[10px] text-[#00ff9f]/60 mono"></span>
@@ -510,7 +523,7 @@
         <div class="section-title">RECENT ACQUISITIONS — STRATEGY</div>
         <div class="text-[10px] text-white/40">UPDATED WITH LIVE BTC PRICE</div>
       </div>
-      <div id="saylor-purchases" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 text-xs sm:text-sm">
+      <div id="saylor-purchases" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 text-[10px] sm:text-xs lg:text-sm">
         <!-- Populated by Core Logic -->
       </div>
     </div>
@@ -775,6 +788,7 @@
       }
 
       function updateFreshnessIndicators() {
+        const now = Date.now();
         const priceCard = document.querySelector('.lg\\:col-span-5.holo-card');
         const fngCard = document.querySelector('.lg\\:col-span-3.holo-card');
         const networkCards = document.querySelectorAll('#network-freshness, #network-freshness2, #network-freshness3');
@@ -782,14 +796,14 @@
         // Price card staleness
         if (priceCard) {
           const priceAge = endpointHealth.price.lastSuccess;
-          const isStale = priceAge && (Date.now() - priceAge > 5 * 60 * 1000);
+          const isStale = priceAge && (now - priceAge > 5 * 60 * 1000);
           priceCard.classList.toggle('data-stale', !!isStale);
         }
 
         // F&G card staleness
         if (fngCard) {
           const fngAge = endpointHealth.fng.lastSuccess;
-          const isStale = fngAge && (Date.now() - fngAge > 5 * 60 * 1000);
+          const isStale = fngAge && (now - fngAge > 5 * 60 * 1000);
           fngCard.classList.toggle('data-stale', !!isStale);
         }
 
@@ -797,7 +811,7 @@
         const networkParent = document.querySelector('#hashrate')?.closest('.holo-card');
         if (networkParent) {
           const netAge = endpointHealth.network.lastSuccess;
-          const isStale = netAge && (Date.now() - netAge > 5 * 60 * 1000);
+          const isStale = netAge && (now - netAge > 5 * 60 * 1000);
           networkParent.classList.toggle('data-stale', !!isStale);
         }
 
@@ -808,6 +822,8 @@
           const age = getDataAge('price');
           priceFresh.textContent = age.text;
           priceFresh.style.color = age.color;
+          const ts = endpointHealth.price.lastSuccess;
+          priceFresh.title = ts ? `Last updated: ${new Date(ts).toLocaleTimeString()}` : '';
         }
         if (priceUpdated) {
           const age = getDataAge('price');
@@ -820,6 +836,8 @@
           const age = getDataAge('fng');
           fngFresh.textContent = age.text;
           fngFresh.style.color = age.color;
+          const ts = endpointHealth.fng.lastSuccess;
+          fngFresh.title = ts ? `Last updated: ${new Date(ts).toLocaleTimeString()}` : '';
         }
 
         const netAge = getDataAge('network');
@@ -828,15 +846,25 @@
           if (el) {
             el.textContent = netAge.text;
             el.style.color = netAge.color;
+            const ts = endpointHealth.network.lastSuccess;
+            el.title = ts ? `Last updated: ${new Date(ts).toLocaleTimeString()}` : '';
           }
         });
 
-        // Chart freshness
+        // Chart freshness + stale treatment
         const chartFresh = document.getElementById('chart-freshness');
+        const chartContainer = document.querySelector('.chart-container');
         if (chartFresh) {
           const age = getDataAge('chart');
           chartFresh.textContent = age.text;
           chartFresh.style.color = age.color;
+          const ts = endpointHealth.chart.lastSuccess;
+          chartFresh.title = ts ? `Last updated: ${new Date(ts).toLocaleTimeString()}` : '';
+        }
+        if (chartContainer) {
+          const chartAge = endpointHealth.chart.lastSuccess;
+          const isStale = chartAge && (now - chartAge > 5 * 60 * 1000);
+          chartContainer.classList.toggle('data-stale', !!isStale);
         }
       }
 
