@@ -105,11 +105,25 @@
 
     /* === PRICE HERO === */
     .price-display {
-      font-size: 5.25rem;
+      font-size: 3.5rem;
       line-height: 1;
       font-weight: 700;
-      letter-spacing: -3.5px;
+      letter-spacing: -2.5px;
       transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    @media (min-width: 640px) {
+      .price-display {
+        font-size: 4.5rem;
+        letter-spacing: -3px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .price-display {
+        font-size: 5.25rem;
+        letter-spacing: -3.5px;
+      }
     }
 
     .price-flash-up {
@@ -259,14 +273,14 @@
 
   <!-- HEADER -->
   <header class="relative z-50 border-b border-white/10 bg-[#050508]/90 backdrop-blur-xl">
-    <div class="max-w-[1480px] mx-auto px-8 h-20 flex items-center justify-between">
+    <div class="max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
       <!-- Logo with Alien Head "O" -->
       <div class="flex items-center gap-3">
-        <div class="flex items-center text-4xl font-black tracking-[-2.5px]">
+        <div class="flex items-center text-3xl sm:text-4xl font-black tracking-[-2.5px]">
           <span class="text-white">L</span>
           
           <!-- THE ALIEN HEAD -->
-          <div class="inline-flex items-center justify-center mx-0.5 -mt-1" style="width: 42px; height: 42px;">
+          <div class="inline-flex items-center justify-center mx-0.5 -mt-1" style="width: 34px; height: 34px;">
             <svg id="alien-head" width="42" height="42" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" class="alien-head pulse drop-shadow-[0_0_8px_#00f9ff]">
               <defs>
                 <filter id="neonCyan" x="-50%" y="-50%" width="200%" height="200%">
@@ -329,13 +343,13 @@
     </div>
   </header>
 
-  <div class="max-w-[1480px] mx-auto px-8 pt-8 pb-16 relative z-10">
+  <div class="max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12 sm:pb-16 relative z-10">
 
     <!-- HERO ROW -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
 
       <!-- LIVE BITCOIN PRICE -->
-      <div class="lg:col-span-5 holo-card rounded-2xl p-8 flex flex-col justify-center">
+      <div class="lg:col-span-5 holo-card rounded-2xl p-5 sm:p-6 lg:p-8 flex flex-col justify-center">
         <div class="section-title mb-3">LIVE NEURAL FEED • COINGECKO</div>
         
         <div class="flex items-baseline gap-3">
@@ -343,7 +357,7 @@
         </div>
         
         <div class="flex items-center gap-3 mt-1">
-          <div id="price-change" class="flex items-center gap-1.5 text-2xl font-semibold mono data-value">
+          <div id="price-change" class="flex items-center gap-1.5 text-xl sm:text-2xl font-semibold mono data-value">
             <span class="chevron">▼</span>
             <span>-0.44%</span>
           </div>
@@ -358,11 +372,11 @@
       </div>
 
       <!-- FEAR & GREED GAUGE -->
-      <div class="lg:col-span-3 holo-card rounded-2xl p-6 flex flex-col items-center">
+      <div class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col items-center">
         <div class="section-title mb-2 self-start">FEAR &amp; GREED INDEX</div>
         
-        <div class="relative w-[210px] h-[210px] mt-1">
-          <svg id="fng-gauge" width="210" height="210" viewBox="0 0 210 210" class="gauge-svg">
+        <div class="relative w-[160px] h-[160px] sm:w-[190px] sm:h-[190px] lg:w-[210px] lg:h-[210px] mt-1">
+          <svg id="fng-gauge" width="100%" height="100%" viewBox="0 0 210 210" class="gauge-svg" style="max-width: 210px; max-height: 210px;">
             <!-- Populated by Animation Agent -->
           </svg>
           
@@ -374,7 +388,7 @@
       </div>
 
       <!-- SAYLOR'S WAR CHEST -->
-      <div class="lg:col-span-4 holo-card rounded-2xl p-7 flex flex-col">
+      <div class="lg:col-span-4 holo-card rounded-2xl p-5 sm:p-6 lg:p-7 flex flex-col">
         <div class="flex items-center justify-between">
           <div>
             <div class="section-title">STRATEGY BITCOIN RESERVE</div>
@@ -388,7 +402,7 @@
 
         <div class="mt-auto">
           <div class="flex items-baseline gap-2">
-            <div id="saylor-btc" class="text-5xl font-black mono tracking-tighter text-[#ffd700]">843,738</div>
+            <div id="saylor-btc" class="text-4xl sm:text-5xl font-black mono tracking-tighter text-[#ffd700]">843,738</div>
             <div class="text-2xl text-[#ffd700]/60">BTC</div>
           </div>
           <div id="saylor-usd" class="text-2xl font-semibold mono text-white/90 data-value mt-0.5">$61.84B</div>
@@ -410,7 +424,7 @@
         </div>
         <div class="text-xs px-3 py-1 rounded bg-white/5 border border-white/10 text-[#00f9ff]/70">CHROME VEIL • v4.2</div>
       </div>
-      <div class="chart-container h-[280px]">
+      <div class="chart-container h-[220px] sm:h-[260px] lg:h-[280px]">
         <canvas id="price-chart"></canvas>
       </div>
     </div>
@@ -445,7 +459,7 @@
         <div class="section-title">RECENT ACQUISITIONS — STRATEGY</div>
         <div class="text-[10px] text-white/40">UPDATED WITH LIVE BTC PRICE</div>
       </div>
-      <div id="saylor-purchases" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 text-sm">
+      <div id="saylor-purchases" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 text-sm">
         <!-- Populated by Core Logic -->
       </div>
     </div>
