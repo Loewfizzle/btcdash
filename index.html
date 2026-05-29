@@ -233,33 +233,6 @@
       100% { transform: translateX(0); }
     }
 
-    /* === SAYLOR ACQUIRE BUTTON === */
-    .acquire-btn {
-      position: relative;
-      overflow: hidden;
-      transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-      border: 1px solid rgba(255, 215, 0, 0.5);
-    }
-
-    .acquire-btn:hover {
-      background: rgba(255, 215, 0, 0.1);
-      box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
-      border-color: #ffd700;
-    }
-
-    .acquire-btn::after {
-      content: '';
-      position: absolute;
-      inset: -50% -100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-      transform: skewX(-25deg);
-      transition: left 0.6s;
-    }
-
-    .acquire-btn:hover::after {
-      left: 200%;
-    }
-
     /* === TOAST === */
     .neural-toast {
       animation: toast-slide 0.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
@@ -454,13 +427,6 @@
           </div>
           <div class="text-[#00f9ff]/50 text-sm">24H</div>
         </div>
-
-        <div class="mt-4 text-sm text-[#00f9ff]/70 mono">
-          <span id="price-sats">1,000,000 sats</span>
-          <span class="text-white/30 mx-2">•</span>
-          <span class="text-xs">PER BTC</span>
-          <span id="price-freshness" class="ml-3 text-[10px] text-[#00ff9f]/60 mono"></span>
-        </div>
       </div>
 
       <!-- FEAR & GREED GAUGE -->
@@ -475,9 +441,10 @@
             <!-- Populated by Animation Agent -->
           </svg>
           
-          <div class="absolute inset-0 flex flex-col items-center justify-center pt-3">
-            <div id="fng-value" class="text-6xl font-black mono tracking-tighter">23</div>
-            <div id="fng-label" class="text-xs tracking-[2px] font-semibold text-[#ff0033] mt-0.5">EXTREME FEAR</div>
+          <!-- Text cluster pulled upward + tighter label to avoid overlapping bottom color arcs -->
+          <div class="absolute inset-0 flex flex-col items-center justify-start pt-6 sm:pt-7">
+            <div id="fng-value" class="text-5xl sm:text-6xl font-black mono tracking-tighter">23</div>
+            <div id="fng-label" class="text-[10px] sm:text-xs tracking-[1.5px] font-semibold text-[#ff0033] mt-0.5">EXTREME FEAR</div>
           </div>
         </div>
       </div>
@@ -486,7 +453,7 @@
       <div class="lg:col-span-4 holo-card rounded-2xl p-3 sm:p-4 lg:p-6 flex flex-col text-sm sm:text-base">
         <div class="flex items-center justify-between">
           <div>
-            <div class="section-title">STRATEGY BITCOIN RESERVE</div>
+            <div class="section-title">SAYLOR'S WAR CHEST</div>
             <div class="text-amber-400/90 text-xs tracking-widest">MICROSTRATEGY • PUBLIC DISCLOSURES</div>
           </div>
           <div class="text-right">
@@ -502,11 +469,6 @@
           </div>
           <div id="saylor-usd" class="text-2xl font-semibold mono text-white/90 data-value mt-0.5">$61.84B</div>
         </div>
-
-        <button id="acquire-btn" class="acquire-btn mt-6 w-full py-3.5 rounded-xl bg-black/40 text-[#ffd700] font-semibold tracking-[1.5px] text-sm active:scale-[0.985] transition">
-          ACQUIRE MORE BTC
-        </button>
-        <div class="text-[10px] text-center text-white/30 mt-2 tracking-wide">NEURAL UPLINK • INSTANT SETTLEMENT</div>
       </div>
     </div>
 
@@ -566,7 +528,7 @@
         <div class="section-title">RECENT ACQUISITIONS — STRATEGY</div>
         <div class="text-[10px] text-white/40">UPDATED WITH LIVE BTC PRICE</div>
       </div>
-      <div id="saylor-purchases" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 text-[10px] sm:text-xs lg:text-sm">
+      <div id="saylor-purchases" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-2 sm:gap-3 text-[10px] sm:text-xs lg:text-sm">
         <!-- Populated by Core Logic -->
       </div>
     </div>
@@ -656,12 +618,16 @@
 
       let chartInstance = null;
       let saylorPurchases = [
+        { date: '2026-05-02', btc: 14200, usd: 1.05e9 },
+        { date: '2026-04-21', btc: 8750, usd: 638000000 },
         { date: '2026-04-12', btc: 12450, usd: 912000000 },
         { date: '2026-03-28', btc: 9800, usd: 712000000 },
         { date: '2026-03-05', btc: 15720, usd: 1.12e9 },
         { date: '2026-02-19', btc: 8300, usd: 598000000 },
         { date: '2026-02-03', btc: 11200, usd: 795000000 },
-        { date: '2026-01-15', btc: 9500, usd: 682000000 }
+        { date: '2026-01-15', btc: 9500, usd: 682000000 },
+        { date: '2025-12-29', btc: 6800, usd: 482000000 },
+        { date: '2025-12-08', btc: 10350, usd: 721000000 }
       ];
 
       function setSimMode(active) {
@@ -1169,7 +1135,7 @@
 
         container.innerHTML = '';
 
-        const recent = [...saylorPurchases].reverse().slice(0, 6);
+        const recent = [...saylorPurchases].slice(0, 10);
 
         recent.forEach(p => {
           const div = document.createElement('div');
@@ -1198,32 +1164,6 @@
         renderSaylorPurchases();
         return window.DASH.saylor.btc;
       };
-
-      // Wire ACQUIRE button with processing state (Medium Priority)
-      const acquireBtnEl = document.getElementById('acquire-btn');
-      if (acquireBtnEl) {
-        acquireBtnEl.addEventListener('click', () => {
-          if (acquireBtnEl.disabled) return;
-
-          const originalText = acquireBtnEl.textContent;
-          acquireBtnEl.disabled = true;
-          acquireBtnEl.textContent = 'PROCESSING...';
-          acquireBtnEl.style.opacity = '0.7';
-
-          // Simulate network delay for realism (short)
-          setTimeout(() => {
-            const added = Math.floor(Math.random() * 20000) + 8000;
-            window.DASH.simulateSaylorPurchase(added);
-
-            // Visual effects are handled in Animation layer via events if needed
-            // For now we keep confetti in the animation side
-
-            acquireBtnEl.disabled = false;
-            acquireBtnEl.textContent = originalText;
-            acquireBtnEl.style.opacity = '1';
-          }, 420);
-        });
-      }
 
       // Main polling
       function startLiveUpdates() {
@@ -1282,7 +1222,6 @@
       const fngLabel = document.getElementById('fng-label');
       const saylorBtc = document.getElementById('saylor-btc');
       const saylorUsd = document.getElementById('saylor-usd');
-      const acquireBtn = document.getElementById('acquire-btn');
       const toastContainer = document.getElementById('toast-container');
       const fxCanvas = document.getElementById('fx-canvas');
 
@@ -1469,19 +1408,11 @@
         setTimeout(() => { toast.style.transition = 'all 0.25s ease'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 2300);
       }
 
-      // Acquire button (visual effects only - logic now lives in Core)
-      function wireAcquire() {
-        if (!acquireBtn) return;
-        // The real logic is now handled in the Core Logic layer
-        // This just ensures the visual burst still works
-      }
-
       // Init everything
       function initEffects() {
         createGauge();
         initConfetti();
         driveAlienHead();
-        wireAcquire();
 
         setTimeout(() => {
           updateGauge(23);
