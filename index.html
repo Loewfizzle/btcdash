@@ -280,6 +280,11 @@
       color: #ffaa00;
     }
 
+    #data-mode-indicator {
+      transition: color 0.2s ease, border-color 0.2s ease;
+      font-feature-settings: "tnum";
+    }
+
     /* Stale data visual treatment */
     .data-stale {
       opacity: 0.75;
@@ -334,21 +339,21 @@
   <!-- Subtle digital grid -->
   <div class="fixed inset-0 grid-overlay z-0"></div>
 
-  <!-- SIM MODE BANNER -->
-  <div id="sim-banner" class="hidden fixed top-0 left-0 right-0 z-[200] sim-banner text-center py-1 text-xs tracking-[2px] font-medium">
-    SIM MODE — NEURAL UPLINK DEGRADED • USING CURATED MOCK DATA
+  <!-- SIM MODE BANNER (only visible on real degradation) -->
+  <div id="sim-banner" class="hidden fixed top-0 left-0 right-0 z-[200] sim-banner text-center py-1 text-xs tracking-[1px] font-medium">
+    NEURAL UPLINK DEGRADED — Using cached data • Tap RECAL to retry live feeds
   </div>
 
   <!-- HEADER -->
   <header class="relative z-50 border-b border-white/10 bg-[#050508]/90 backdrop-blur-xl">
-    <div class="max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 overflow-hidden">
-      <!-- Logo with Alien Head "O" -->
-      <div class="flex items-center gap-2 min-w-0">
-        <div class="flex items-center text-2xl sm:text-3xl lg:text-4xl font-black tracking-[-2px] sm:tracking-[-2.5px] min-w-0">
+    <div class="max-w-[1480px] mx-auto px-3 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-x-3 gap-y-1 py-2 sm:py-2.5">
+      <!-- Logo + subtitle (compact, no overlap) -->
+      <div class="flex flex-col min-w-0">
+        <div class="flex items-center text-[20px] leading-none xs:text-[22px] sm:text-3xl lg:text-4xl font-black tracking-[-1.5px] min-w-0">
           <span class="text-white shrink-0">L</span>
           
-          <!-- THE ALIEN HEAD -->
-          <div class="inline-flex items-center justify-center mx-0.5 -mt-1 w-7 h-7 sm:w-8 sm:h-8 lg:w-[34px] lg:h-[34px] shrink-0">
+          <!-- THE ALIEN HEAD (smaller on mobile to reduce crowding) -->
+          <div class="inline-flex items-center justify-center mx-0.5 -mt-0.5 w-6 h-6 sm:w-8 sm:h-8 lg:w-[34px] lg:h-[34px] shrink-0">
             <svg id="alien-head" width="42" height="42" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" class="alien-head pulse drop-shadow-[0_0_8px_#00f9ff]">
               <defs>
                 <filter id="neonCyan" x="-50%" y="-50%" width="200%" height="200%">
@@ -398,17 +403,28 @@
 
           <span class="text-white">EWFIZZLE'S</span>
         </div>
-        <div class="text-[11px] font-medium tracking-[3px] text-[#00f9ff]/60 -ml-1 mt-1">BITCOIN DASHBOARD</div>
+        <!-- Smaller subtitle on mobile so it never crowds or sits behind logo text -->
+        <div class="text-[8px] sm:text-[9px] lg:text-[10px] leading-none font-medium tracking-[1px] text-[#00f9ff]/55 mt-0.5">BITCOIN DASHBOARD</div>
       </div>
 
-      <div class="flex items-center gap-2 sm:gap-4 min-w-0">
-        <div class="hidden sm:flex items-center gap-2 px-2 sm:px-3 py-1 rounded bg-white/5 border border-white/10">
-          <div class="w-2 h-2 bg-[#00ff9f] rounded-full animate-pulse"></div>
-          <span class="text-[10px] sm:text-xs tracking-[1px] text-[#00ff9f]/80 font-medium">NEURAL LINK STABLE</span>
+      <!-- Right controls: compact on mobile, no horizontal overflow -->
+      <div class="flex items-center gap-1 sm:gap-2 min-w-0 w-full sm:w-auto justify-end">
+        <!-- Neural pill hidden below md to fight crowding -->
+        <div class="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/5 border border-white/10">
+          <div class="w-1.5 h-1.5 bg-[#00ff9f] rounded-full animate-pulse"></div>
+          <span class="text-[9px] tracking-[0.5px] text-[#00ff9f]/70 font-medium">NEURAL LINK STABLE</span>
         </div>
-        <div class="text-[10px] sm:text-xs text-[#00f9ff]/50 mono truncate" id="last-sync">LAST SYNC — —</div>
+
+        <!-- LIVE / SIM indicator (the key visual fix for "says sim mode not live data") -->
+        <div id="data-mode-indicator"
+             class="flex items-center text-[9px] sm:text-[10px] font-mono tracking-[1.5px] px-1.5 py-px rounded border bg-white/5 border-[#00ff9f]/40 text-[#00ff9f]/80">
+          LIVE
+        </div>
+
+        <div class="text-[9px] sm:text-[10px] text-[#00f9ff]/50 mono truncate max-w-[78px] sm:max-w-none" id="last-sync">SYNC — —</div>
+
         <button onclick="window.DASH?.recalibrate?.()" 
-                class="ml-1 px-2 py-1 sm:px-2.5 sm:py-1 text-[8px] sm:text-[10px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95 touch-manipulation whitespace-nowrap">
+                class="px-2 py-1 text-[8px] sm:text-[9px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95 touch-manipulation whitespace-nowrap">
           RECAL
         </button>
       </div>
@@ -603,23 +619,20 @@
         chartData: null,
         saylor: { btc: 843738, avgCost: 41820 },
         lastSync: null,
-        isSimMode: true
+        isSimMode: false
       };
 
-      const simBanner = document.getElementById('sim-banner');
-
-      function setSimMode(active) {
-        window.DASH.isSimMode = active;
-        if (simBanner) simBanner.classList.toggle('hidden', !active);
-      }
-
-      function updateLastSync() {
-        window.DASH.lastSync = new Date();
-        const el = document.getElementById('last-sync');
-        if (el) {
-          el.textContent = 'LAST SYNC — ' + window.DASH.lastSync.toLocaleTimeString([], { 
-            hour: '2-digit', minute: '2-digit', second: '2-digit' 
-          });
+      function updateDataModeIndicator(isSim) {
+        const ind = document.getElementById('data-mode-indicator');
+        if (!ind) return;
+        if (isSim) {
+          ind.textContent = 'SIM';
+          ind.style.borderColor = '#ffaa00';
+          ind.style.color = '#ffaa00';
+        } else {
+          ind.textContent = 'LIVE';
+          ind.style.borderColor = 'rgba(0, 255, 159, 0.4)';
+          ind.style.color = 'rgba(0, 255, 159, 0.85)';
         }
       }
 
@@ -653,31 +666,30 @@
 
       function setSimMode(active) {
         window.DASH.isSimMode = active;
+        updateDataModeIndicator(active);
+
         const banner = document.getElementById('sim-banner');
         if (!banner) return;
 
         if (!active) {
           banner.classList.add('hidden');
-          banner.style.borderColor = '#ff0033';
-          banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
           return;
         }
 
-        // Build a more informative message
+        // Only show the top banner when truly degraded (not on healthy deploys)
         const degraded = [];
         if (endpointHealth.price.failures > 0) degraded.push('Price');
         if (endpointHealth.fng.failures > 0) degraded.push('F&G');
         if (endpointHealth.network.failures > 0) degraded.push('Network');
         if (endpointHealth.chart.failures > 0) degraded.push('Chart');
 
-        let message = 'SIM MODE — NEURAL UPLINK DEGRADED';
+        let message = 'NEURAL UPLINK DEGRADED';
         if (degraded.length > 0) {
-          message += ` • ${degraded.join(' + ')} using cached data`;
-          // Visually distinct for partial vs full degradation
+          message += ` — ${degraded.join(' + ')} using cached data`;
           banner.style.borderColor = '#ffaa00';
           banner.style.background = 'linear-gradient(to right, #2a1a00, #1a1200)';
         } else {
-          message += ' • USING CURATED MOCK DATA';
+          message += ' — Using curated fallback data';
           banner.style.borderColor = '#ff0033';
           banner.style.background = 'linear-gradient(to right, #3b0a0a, #2a1a00)';
         }
@@ -702,13 +714,13 @@
         const el = document.getElementById('last-sync');
 
         if (el) {
-          let text = 'LAST SYNC — ' + new Date(now).toLocaleTimeString([], { 
+          let text = 'SYNC — ' + new Date(now).toLocaleTimeString([], { 
             hour: '2-digit', minute: '2-digit', second: '2-digit' 
           });
 
           if (ageSeconds > 90) {
             const ageMin = Math.floor(ageSeconds / 60);
-            text += `  (some data ~${ageMin}m old)`;
+            text += ` (~${ageMin}m)`;
           }
 
           el.textContent = text;
@@ -1232,6 +1244,7 @@
 
       // Initial boot
       setTimeout(() => {
+        updateDataModeIndicator(window.DASH.isSimMode);
         startLiveUpdates();
         updateFreshnessIndicators();
       }, 400);
