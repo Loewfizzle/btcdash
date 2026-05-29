@@ -368,7 +368,7 @@
         </div>
         <div class="text-xs text-[#00f9ff]/50 mono" id="last-sync">LAST SYNC — —</div>
         <button onclick="window.DASH?.recalibrate?.()" 
-                class="ml-3 px-2.5 py-1 text-[10px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition">
+                class="ml-2 sm:ml-3 px-2.5 py-1 sm:px-3 sm:py-1.5 text-[9px] sm:text-[10px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95">
           RECALIBRATE
         </button>
       </div>
@@ -385,7 +385,10 @@
         <div class="section-title mb-3">LIVE NEURAL FEED • COINGECKO</div>
         
         <div class="flex items-baseline gap-3">
-          <div id="price-usd" class="price-display mono text-white tracking-tighter data-value">$73,291.48</div>
+          <div>
+            <div id="price-usd" class="price-display mono text-white tracking-tighter data-value">$73,291.48</div>
+            <div id="price-updated" class="text-[10px] text-[#00ff9f]/50 mono -mt-1"></div>
+          </div>
         </div>
         
         <div class="flex items-center gap-3 mt-1">
@@ -770,12 +773,18 @@
           networkParent.classList.toggle('data-stale', !!isStale);
         }
 
-        // Update the small freshness labels
+        // Update the small freshness labels + prominent "updated" under price
         const priceFresh = document.getElementById('price-freshness');
+        const priceUpdated = document.getElementById('price-updated');
         if (priceFresh) {
           const age = getDataAge('price');
           priceFresh.textContent = age.text;
           priceFresh.style.color = age.color;
+        }
+        if (priceUpdated) {
+          const age = getDataAge('price');
+          priceUpdated.textContent = (age.text && age.text !== 'no data') ? `updated ${age.text}` : '';
+          priceUpdated.style.color = age.color;
         }
 
         const fngFresh = document.getElementById('fng-freshness');
@@ -929,14 +938,25 @@
       function updateHalvingCountdown(currentHeight) {
         const target = 1050000;
         const blocksLeft = Math.max(0, target - currentHeight);
-        const days = Math.floor(blocksLeft * 10 / 1440);
-        const hours = Math.floor((blocksLeft * 10 % 1440) / 60);
+        const totalMinutes = blocksLeft * 10;
+        const days = Math.floor(totalMinutes / 1440);
+        const hours = Math.floor((totalMinutes % 1440) / 60);
+        const minutes = totalMinutes % 60;
 
         const blocksEl = document.getElementById('halving-blocks');
         const timeEl = document.getElementById('halving-time');
 
         if (blocksEl) blocksEl.innerHTML = `${blocksLeft.toLocaleString()} <span class="text-base align-super text-white/50">BLOCKS</span>`;
-        if (timeEl) timeEl.textContent = blocksLeft > 0 ? `~${days} DAYS • ${hours.toString().padStart(2, '0')}:00:00` : 'HALVING COMPLETE';
+
+        if (timeEl) {
+          if (blocksLeft === 0) {
+            timeEl.textContent = 'HALVING COMPLETE';
+          } else if (days > 0) {
+            timeEl.textContent = `~${days} DAYS • ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          } else {
+            timeEl.textContent = `~${hours}h ${minutes}m`;
+          }
+        }
       }
 
       async function updateChart() {
@@ -1052,6 +1072,32 @@
         renderSaylorPurchases();
         return window.DASH.saylor.btc;
       };
+
+      // Wire ACQUIRE button with processing state (Medium Priority)
+      const acquireBtnEl = document.getElementById('acquire-btn');
+      if (acquireBtnEl) {
+        acquireBtnEl.addEventListener('click', () => {
+          if (acquireBtnEl.disabled) return;
+
+          const originalText = acquireBtnEl.textContent;
+          acquireBtnEl.disabled = true;
+          acquireBtnEl.textContent = 'PROCESSING...';
+          acquireBtnEl.style.opacity = '0.7';
+
+          // Simulate network delay for realism (short)
+          setTimeout(() => {
+            const added = Math.floor(Math.random() * 20000) + 8000;
+            window.DASH.simulateSaylorPurchase(added);
+
+            // Visual effects are handled in Animation layer via events if needed
+            // For now we keep confetti in the animation side
+
+            acquireBtnEl.disabled = false;
+            acquireBtnEl.textContent = originalText;
+            acquireBtnEl.style.opacity = '1';
+          }, 420);
+        });
+      }
 
       // Main polling
       function startLiveUpdates() {
