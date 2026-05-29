@@ -514,7 +514,7 @@
         <div class="flex items-center gap-3">
           <div>
             <div class="section-title">30-DAY PRICE TRAJECTORY</div>
-            <div class="text-xs text-white/40">COINGECKO • DAILY CLOSE</div>
+            <div class="text-xs text-white/40">MULTI-ORACLE • DAILY CLOSE</div>
           </div>
           <span id="chart-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
         </div>
@@ -654,6 +654,23 @@
             usd: parseFloat(d.data.priceUsd),
             usd_24h_change: parseFloat(d.data.changePercent24Hr)
           })
+        }
+      ];
+
+      // Chart data providers (fallback for when CoinGecko is rate-limited or blocked)
+      const CHART_PROVIDERS = [
+        {
+          name: 'CoinGecko',
+          url: 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily',
+          parse: (d) => d.prices || []
+        },
+        {
+          name: 'CoinCap',
+          url: 'https://api.coincap.io/v2/assets/bitcoin/history?interval=d1',
+          parse: (d) => {
+            const arr = (d.data || []).slice(-30); // last ~30 days
+            return arr.map(item => [item.time, parseFloat(item.priceUsd)]);
+          }
         }
       ];
 
@@ -1137,16 +1154,19 @@
         // Clear previous content
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Cyberpunk "unavailable" styling
-        ctx.fillStyle = '#4a4a5a';
-        ctx.font = '600 15px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        // Much more visible cyberpunk unavailable message
+        ctx.fillStyle = '#8899aa';
+        ctx.font = '600 16px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
 
-        ctx.fillText('DATA UNAVAILABLE', centerX, centerY);
+        ctx.fillText('CHART DATA UNAVAILABLE', centerX, centerY - 8);
+        ctx.fillStyle = '#556677';
+        ctx.font = '500 11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        ctx.fillText('All sources temporarily unreachable', centerX, centerY + 14);
       }
 
       async function updateChart() {
@@ -1155,77 +1175,94 @@
           return;
         }
 
-        try {
-          const data = await fetch(API.chart).then(r => r.json());
-          const prices = data.prices;
+        let prices = null;
+        let providerName = null;
 
-          window.DASH.chartData = prices;
+        // Try multiple chart sources (CoinGecko often flakes in production)
+        for (const provider of CHART_PROVIDERS) {
+          try {
+            const res = await fetchWithTimeout(provider.url, 10000);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const json = await res.json();
+            const parsed = provider.parse(json);
 
-          if (chartInstance) chartInstance.destroy();
-
-          const ctx = document.getElementById('price-chart');
-          if (!ctx) return;
-
-          chartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: prices.map(p => new Date(p[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
-              datasets: [{
-                label: 'BTC Price (USD)',
-                data: prices.map(p => p[1]),
-                borderColor: '#00f9ff',
-                borderWidth: 2.5,
-                tension: 0.35,
-                fill: true,
-                backgroundColor: 'rgba(0, 249, 255, 0.08)',
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                pointHoverBackgroundColor: '#ff00aa'
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: '#0a0a12',
-                  borderColor: '#00f9ff',
-                  borderWidth: 1,
-                  titleColor: '#00f9ff',
-                  bodyColor: '#e0e7ff',
-                  displayColors: false
-                }
-              },
-              scales: {
-                x: {
-                  grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
-                  ticks: { color: 'rgba(224, 231, 255, 0.6)', font: { size: 10 } }
-                },
-                y: {
-                  grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
-                  ticks: {
-                    color: 'rgba(224, 231, 255, 0.6)',
-                    font: { size: 10 },
-                    callback: v => '$' + (v / 1000) + 'k'
-                  }
-                }
-              },
-              elements: {
-                line: { tension: 0.35 },
-                point: { hitRadius: 20 }
-              }
+            if (parsed && parsed.length > 5) {
+              prices = parsed;
+              providerName = provider.name;
+              break;
             }
-          });
+          } catch (err) {
+            console.warn(`[Chart] ${provider.name} failed:`, err.message || err);
+          }
+        }
 
-          recordFetchResult('chart', true);
-          // Chart success/failure is isolated — it renders its own "DATA UNAVAILABLE" state
-          updateFreshnessIndicators();
-        } catch (e) {
+        if (!prices || prices.length < 5) {
           recordFetchResult('chart', false);
           renderChartUnavailable();
-          console.warn('[Core] Chart load failed');
+          return;
         }
+
+        window.DASH.chartData = prices;
+
+        if (chartInstance) chartInstance.destroy();
+
+        const ctx = document.getElementById('price-chart');
+        if (!ctx) return;
+
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: prices.map(p => new Date(p[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+            datasets: [{
+              label: 'BTC Price (USD)',
+              data: prices.map(p => p[1]),
+              borderColor: '#00f9ff',
+              borderWidth: 2.5,
+              tension: 0.35,
+              fill: true,
+              backgroundColor: 'rgba(0, 249, 255, 0.08)',
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointHoverBackgroundColor: '#ff00aa'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#0a0a12',
+                borderColor: '#00f9ff',
+                borderWidth: 1,
+                titleColor: '#00f9ff',
+                bodyColor: '#e0e7ff',
+                displayColors: false
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                ticks: { color: 'rgba(224, 231, 255, 0.6)', font: { size: 10 } }
+              },
+              y: {
+                grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                ticks: {
+                  color: 'rgba(224, 231, 255, 0.6)',
+                  font: { size: 10 },
+                  callback: v => '$' + (v / 1000) + 'k'
+                }
+              }
+            },
+            elements: {
+              line: { tension: 0.35 },
+              point: { hitRadius: 20 }
+            }
+          }
+        });
+
+        recordFetchResult('chart', true);
+        updateFreshnessIndicators();
       }
 
       // Saylor purchase grid
