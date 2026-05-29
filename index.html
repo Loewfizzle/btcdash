@@ -274,9 +274,15 @@
       50% { opacity: 1; }
     }
 
+    .data-loading {
+      animation: subtle-pulse 1.2s infinite ease-in-out;
+      opacity: 0.65;
+    }
+
     #price-freshness,
     #fng-freshness,
-    #network-freshness {
+    #network-freshness,
+    #chart-freshness {
       transition: opacity 0.2s ease;
     }
   </style>
@@ -418,7 +424,7 @@
       </div>
 
       <!-- SAYLOR'S WAR CHEST -->
-      <div class="lg:col-span-4 holo-card rounded-2xl p-5 sm:p-6 lg:p-7 flex flex-col">
+      <div class="lg:col-span-4 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col">
         <div class="flex items-center justify-between">
           <div>
             <div class="section-title">STRATEGY BITCOIN RESERVE</div>
@@ -448,9 +454,12 @@
     <!-- 30-DAY CHART -->
     <div class="holo-card rounded-2xl p-7 mb-8">
       <div class="flex items-center justify-between mb-4">
-        <div>
-          <div class="section-title">30-DAY PRICE TRAJECTORY</div>
-          <div class="text-xs text-white/40">COINGECKO • DAILY CLOSE</div>
+        <div class="flex items-center gap-3">
+          <div>
+            <div class="section-title">30-DAY PRICE TRAJECTORY</div>
+            <div class="text-xs text-white/40">COINGECKO • DAILY CLOSE</div>
+          </div>
+          <span id="chart-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
         </div>
         <div class="text-xs px-3 py-1 rounded bg-white/5 border border-white/10 text-[#00f9ff]/70">CHROME VEIL • v4.2</div>
       </div>
@@ -498,7 +507,7 @@
         <div class="section-title">RECENT ACQUISITIONS — STRATEGY</div>
         <div class="text-[10px] text-white/40">UPDATED WITH LIVE BTC PRICE</div>
       </div>
-      <div id="saylor-purchases" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 text-sm">
+      <div id="saylor-purchases" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 text-xs sm:text-sm">
         <!-- Populated by Core Logic -->
       </div>
     </div>
@@ -686,7 +695,30 @@
       }
 
       function updateLoadingIndicators() {
-        // Simple pulsing dot next to freshness labels when refreshing
+        const priceVal = document.getElementById('price-usd');
+        const fngVal = document.getElementById('fng-value');
+        const networkVals = [
+          document.getElementById('hashrate'),
+          document.getElementById('difficulty'),
+          document.getElementById('halving-blocks')
+        ];
+        const chartContainer = document.querySelector('.chart-container');
+
+        // Price
+        if (priceVal) priceVal.classList.toggle('data-loading', refreshingSources.has('price'));
+
+        // F&G
+        if (fngVal) fngVal.classList.toggle('data-loading', refreshingSources.has('fng'));
+
+        // Network
+        networkVals.forEach(el => {
+          if (el) el.classList.toggle('data-loading', refreshingSources.has('network'));
+        });
+
+        // Chart
+        if (chartContainer) chartContainer.classList.toggle('data-loading', refreshingSources.has('chart'));
+
+        // Freshness labels
         const indicators = {
           price:  document.getElementById('price-freshness'),
           fng:    document.getElementById('fng-freshness'),
@@ -698,10 +730,15 @@
           if (!el) return;
 
           if (refreshingSources.has(key)) {
-            el.textContent = '⟳ ' + (el.textContent.replace('⟳ ', ''));
+            if (!el.textContent.startsWith('⟳')) {
+              el.textContent = '⟳ ' + el.textContent;
+            }
             el.style.opacity = '0.6';
           } else {
             el.style.opacity = '1';
+            if (el.textContent.startsWith('⟳')) {
+              el.textContent = el.textContent.replace('⟳ ', '');
+            }
           }
         });
       }
@@ -756,6 +793,14 @@
             el.style.color = netAge.color;
           }
         });
+
+        // Chart freshness
+        const chartFresh = document.getElementById('chart-freshness');
+        if (chartFresh) {
+          const age = getDataAge('chart');
+          chartFresh.textContent = age.text;
+          chartFresh.style.color = age.color;
+        }
       }
 
       const MAX_BACKOFF = 5 * 60 * 1000; // 5 minutes max
