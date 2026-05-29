@@ -1015,8 +1015,38 @@
         }
       }
 
+      function renderChartUnavailable() {
+        if (chartInstance) {
+          chartInstance.destroy();
+          chartInstance = null;
+        }
+
+        const canvas = document.getElementById('price-chart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d', { alpha: true });
+        if (!ctx) return;
+
+        // Clear previous content
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Cyberpunk "unavailable" styling
+        ctx.fillStyle = '#4a4a5a';
+        ctx.font = '600 15px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        ctx.fillText('DATA UNAVAILABLE', centerX, centerY);
+      }
+
       async function updateChart() {
-        if (shouldSkipFetch('chart')) return;
+        if (shouldSkipFetch('chart')) {
+          renderChartUnavailable();
+          return;
+        }
 
         try {
           const data = await fetch(API.chart).then(r => r.json());
@@ -1088,7 +1118,8 @@
         } catch (e) {
           recordFetchResult('chart', false);
           setSimMode(true);
-          console.warn('[Core] Chart load failed, using placeholder');
+          renderChartUnavailable();
+          console.warn('[Core] Chart load failed');
         }
       }
 
