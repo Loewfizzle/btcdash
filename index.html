@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOEWFIZZLE'S BITCOIN DASHBOARD // NEURAL-07</title>
+  
+  <!-- Tailwind 3.4 via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    /* ============================================
+       LOEWFIZZLE'S BITCOIN DASHBOARD — CYBERPUNK DESIGN SYSTEM
+       Codename: CHROME VEIL
+       ============================================ */
+
+    :root {
+      --cyan: #00f9ff;
+      --magenta: #ff00aa;
+      --lime: #00ff9f;
+      --red: #ff0033;
+      --gold: #ffd700;
+      --void: #050508;
+      --panel: #0a0a12;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-feature-settings: "tnum";
+    }
+
+    /* === BACKGROUND LAYERS === */
+    .neural-bg {
+      background: 
+        radial-gradient(circle at 50% 20%, #0a0a12 0%, #050508 70%),
+        #050508;
+      background-size: 100% 100%;
+    }
+
+    /* Subtle perspective grid */
+    .grid-overlay {
+      background-image: 
+        linear-gradient(rgba(0, 249, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 249, 255, 0.06) 1px, transparent 1px);
+      background-size: 42px 42px;
+      pointer-events: none;
+    }
+
+    /* CRT Scanlines — lightweight and beautiful */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0, 249, 255, 0.035) 3px,
+        rgba(0, 249, 255, 0.035) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+      animation: scanline-drift 4.2s linear infinite;
+    }
+
+    @keyframes scanline-drift {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 100px; }
+    }
+
+    /* === GLASSMORPHISM + NEON CARDS === */
+    .holo-card {
+      background: rgba(10, 10, 18, 0.82);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 249, 255, 0.25);
+      box-shadow: 
+        0 0 0 1px rgba(0, 249, 255, 0.08),
+        0 8px 32px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
+    }
+
+    .holo-card:hover {
+      border-color: rgba(0, 249, 255, 0.55);
+      box-shadow: 
+        0 0 0 1px rgba(0, 249, 255, 0.15),
+        0 0 25px rgba(0, 249, 255, 0.15),
+        0 0 50px rgba(255, 0, 170, 0.08),
+        0 12px 48px rgba(0, 0, 0, 0.7);
+    }
+
+    .section-title {
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      font-weight: 600;
+      color: rgba(0, 249, 255, 0.65);
+      text-transform: uppercase;
+    }
+
+    /* === PRICE HERO === */
+    .price-display {
+      font-size: 5.25rem;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -3.5px;
+      transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .price-flash-up {
+      animation: price-flash-green 420ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .price-flash-down {
+      animation: price-flash-red 420ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    @keyframes price-flash-green {
+      0% { color: #00ff9f; text-shadow: 0 0 12px #00ff9f, 0 0 28px #00ff9f; transform: scale(1.02); }
+      100% { color: #e0e7ff; text-shadow: none; transform: scale(1); }
+    }
+
+    @keyframes price-flash-red {
+      0% { color: #ff0033; text-shadow: 0 0 12px #ff0033, 0 0 28px #ff0033; transform: scale(0.985); }
+      100% { color: #e0e7ff; text-shadow: none; transform: scale(1); }
+    }
+
+    .chevron {
+      transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    /* === GAUGE STYLING === */
+    .gauge-svg {
+      filter: drop-shadow(0 0 12px rgba(0, 249, 255, 0.2));
+    }
+
+    /* === ALIEN HEAD === */
+    .alien-head {
+      transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .alien-head.pulse {
+      animation: alien-breathe 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    .alien-orb {
+      animation: alien-orb-pulse 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes alien-breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.035); }
+    }
+
+    @keyframes alien-orb-pulse {
+      0%, 100% { opacity: 0.95; }
+      50% { opacity: 1; }
+    }
+
+    .glitch {
+      position: relative;
+    }
+
+    .glitch.active::before,
+    .glitch.active::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.7;
+    }
+
+    .glitch.active::before { 
+      color: var(--cyan); 
+      transform: translateX(-1.5px); 
+      animation: glitch-1 80ms linear; 
+    }
+    .glitch.active::after { 
+      color: var(--magenta); 
+      transform: translateX(1.5px); 
+      animation: glitch-2 80ms linear; 
+    }
+
+    @keyframes glitch-1 {
+      0% { transform: translateX(-1.5px); }
+      100% { transform: translateX(0); }
+    }
+    @keyframes glitch-2 {
+      0% { transform: translateX(1.5px); }
+      100% { transform: translateX(0); }
+    }
+
+    /* === SAYLOR ACQUIRE BUTTON === */
+    .acquire-btn {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+      border: 1px solid rgba(255, 215, 0, 0.5);
+    }
+
+    .acquire-btn:hover {
+      background: rgba(255, 215, 0, 0.1);
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
+      border-color: #ffd700;
+    }
+
+    .acquire-btn::after {
+      content: '';
+      position: absolute;
+      inset: -50% -100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+      transform: skewX(-25deg);
+      transition: left 0.6s;
+    }
+
+    .acquire-btn:hover::after {
+      left: 200%;
+    }
+
+    /* === TOAST === */
+    .neural-toast {
+      animation: toast-slide 0.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    }
+
+    @keyframes toast-slide {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .data-value {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sim-banner {
+      background: linear-gradient(to right, #3b0a0a, #2a1a00);
+      border: 1px solid #ff0033;
+      color: #ffaa00;
+    }
+  </style>
+</head>
+<body class="neural-bg text-[#e0e7ff] overflow-x-hidden">
+  <!-- Fixed scanlines overlay -->
+  <div class="scanlines"></div>
+
+  <!-- Subtle digital grid -->
+  <div class="fixed inset-0 grid-overlay z-0"></div>
+
+  <!-- SIM MODE BANNER -->
+  <div id="sim-banner" class="hidden fixed top-0 left-0 right-0 z-[200] sim-banner text-center py-1 text-xs tracking-[2px] font-medium">
+    SIM MODE — NEURAL UPLINK DEGRADED • USING CURATED MOCK DATA
+  </div>
+
+  <!-- HEADER -->
+  <header class="relative z-50 border-b border-white/10 bg-[#050508]/90 backdrop-blur-xl">
+    <div class="max-w-[1480px] mx-auto px-8 h-20 flex items-center justify-between">
+      <!-- Logo with Alien Head "O" -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center text-4xl font-black tracking-[-2.5px]">
+          <span class="text-white">L</span>
+          
+          <!-- THE ALIEN HEAD -->
+          <div class="inline-flex items-center justify-center mx-0.5 -mt-1" style="width: 42px; height: 42px;">
+            <svg id="alien-head" width="42" height="42" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" class="alien-head pulse drop-shadow-[0_0_8px_#00f9ff]">
+              <defs>
+                <filter id="neonCyan" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+                <filter id="neonMagenta" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="1.8" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <path d="M28 28 Q50 8 72 28 Q78 52 72 82 Q50 98 28 82 Q22 52 28 28" 
+                    fill="#111118" stroke="#00f9ff" stroke-width="4.5" stroke-linejoin="round"/>
+              
+              <path d="M32 32 Q50 16 68 32 Q72 48 68 74 Q50 86 32 74 Q28 48 32 32" 
+                    fill="none" stroke="#ffffff" stroke-width="1.2" opacity="0.15"/>
+
+              <path d="M38 38 L46 34 L52 38" stroke="#00f9ff" stroke-width="1.25" opacity="0.7"/>
+              <path d="M46 42 L52 39" stroke="#ff00aa" stroke-width="0.9" opacity="0.6"/>
+              <path d="M55 36 L60 41" stroke="#00f9ff" stroke-width="1" opacity="0.55"/>
+
+              <ellipse cx="38" cy="48" rx="8.5" ry="11" fill="#0a0a12"/>
+              <rect x="36.2" y="40" width="3.6" height="16" rx="1.8" fill="#00f9ff" class="alien-eye-slit" filter="url(#neonCyan)"/>
+
+              <ellipse cx="62" cy="48" rx="8.5" ry="11" fill="#0a0a12"/>
+              <rect x="60.2" y="40" width="3.6" height="16" rx="1.8" fill="#00f9ff" class="alien-eye-slit" filter="url(#neonCyan)"/>
+
+              <path d="M32 24 Q26 14 22 8" stroke="#ff00aa" stroke-width="2.25" stroke-linecap="round"/>
+              <circle cx="21" cy="7" r="3.8" fill="#111118" stroke="#ff00aa" stroke-width="1.5"/>
+              <circle cx="21" cy="7" r="2.1" fill="#00f9ff" class="alien-orb" filter="url(#neonCyan)"/>
+
+              <path d="M68 24 Q74 14 78 8" stroke="#ff00aa" stroke-width="2.25" stroke-linecap="round"/>
+              <circle cx="79" cy="7" r="3.8" fill="#111118" stroke="#ff00aa" stroke-width="1.5"/>
+              <circle cx="79" cy="7" r="2.1" fill="#00f9ff" class="alien-orb" filter="url(#neonCyan)"/>
+
+              <path d="M28 28 Q50 8 72 28 Q78 52 72 82 Q50 98 28 82 Q22 52 28 28" 
+                    fill="none" stroke="#ff00aa" stroke-width="2.25" stroke-linejoin="round" opacity="0.85"/>
+            </svg>
+          </div>
+
+          <span class="text-white">EWFIZZLE'S</span>
+        </div>
+        <div class="text-[11px] font-medium tracking-[3px] text-[#00f9ff]/60 -ml-1 mt-1">BITCOIN DASHBOARD</div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 px-3 py-1 rounded bg-white/5 border border-white/10">
+          <div class="w-2 h-2 bg-[#00ff9f] rounded-full animate-pulse"></div>
+          <span class="text-xs tracking-[1px] text-[#00ff9f]/80 font-medium">NEURAL LINK STABLE</span>
+        </div>
+        <div class="text-xs text-[#00f9ff]/50 mono" id="last-sync">LAST SYNC — —</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-[1480px] mx-auto px-8 pt-8 pb-16 relative z-10">
+
+    <!-- HERO ROW -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+
+      <!-- LIVE BITCOIN PRICE -->
+      <div class="lg:col-span-5 holo-card rounded-2xl p-8 flex flex-col justify-center">
+        <div class="section-title mb-3">LIVE NEURAL FEED • COINGECKO</div>
+        
+        <div class="flex items-baseline gap-3">
+          <div id="price-usd" class="price-display mono text-white tracking-tighter data-value">$73,291.48</div>
+        </div>
+        
+        <div class="flex items-center gap-3 mt-1">
+          <div id="price-change" class="flex items-center gap-1.5 text-2xl font-semibold mono data-value">
+            <span class="chevron">▼</span>
+            <span>-0.44%</span>
+          </div>
+          <div class="text-[#00f9ff]/50 text-sm">24H</div>
+        </div>
+
+        <div class="mt-4 text-sm text-[#00f9ff]/70 mono">
+          <span id="price-sats">1,000,000 sats</span>
+          <span class="text-white/30 mx-2">•</span>
+          <span class="text-xs">PER BTC</span>
+        </div>
+      </div>
+
+      <!-- FEAR & GREED GAUGE -->
+      <div class="lg:col-span-3 holo-card rounded-2xl p-6 flex flex-col items-center">
+        <div class="section-title mb-2 self-start">FEAR &amp; GREED INDEX</div>
+        
+        <div class="relative w-[210px] h-[210px] mt-1">
+          <svg id="fng-gauge" width="210" height="210" viewBox="0 0 210 210" class="gauge-svg">
+            <!-- Populated by Animation Agent -->
+          </svg>
+          
+          <div class="absolute inset-0 flex flex-col items-center justify-center pt-3">
+            <div id="fng-value" class="text-6xl font-black mono tracking-tighter">23</div>
+            <div id="fng-label" class="text-xs tracking-[2px] font-semibold text-[#ff0033] mt-0.5">EXTREME FEAR</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SAYLOR'S WAR CHEST -->
+      <div class="lg:col-span-4 holo-card rounded-2xl p-7 flex flex-col">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="section-title">STRATEGY BITCOIN RESERVE</div>
+            <div class="text-amber-400/90 text-xs tracking-widest">MICROSTRATEGY • PUBLIC DISCLOSURES</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] text-[#ffd700]/60">AVG ACQ COST</div>
+            <div id="saylor-avg" class="mono font-semibold text-[#ffd700]">$41,820</div>
+          </div>
+        </div>
+
+        <div class="mt-auto">
+          <div class="flex items-baseline gap-2">
+            <div id="saylor-btc" class="text-5xl font-black mono tracking-tighter text-[#ffd700]">843,738</div>
+            <div class="text-2xl text-[#ffd700]/60">BTC</div>
+          </div>
+          <div id="saylor-usd" class="text-2xl font-semibold mono text-white/90 data-value mt-0.5">$61.84B</div>
+        </div>
+
+        <button id="acquire-btn" class="acquire-btn mt-6 w-full py-3.5 rounded-xl bg-black/40 text-[#ffd700] font-semibold tracking-[1.5px] text-sm active:scale-[0.985] transition">
+          ACQUIRE MORE BTC
+        </button>
+        <div class="text-[10px] text-center text-white/30 mt-2 tracking-wide">NEURAL UPLINK • INSTANT SETTLEMENT</div>
+      </div>
+    </div>
+
+    <!-- NETWORK STATS -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="holo-card rounded-2xl p-6">
+        <div class="section-title">CURRENT HASH RATE</div>
+        <div id="hashrate" class="text-4xl font-bold mono tracking-tighter mt-3">1,031 EH/s</div>
+        <div id="hashrate-trend" class="text-xs text-[#00ff9f] mt-1">+7.2% (7D)</div>
+      </div>
+
+      <div class="holo-card rounded-2xl p-6">
+        <div class="section-title">CURRENT DIFFICULTY</div>
+        <div id="difficulty" class="text-4xl font-bold mono tracking-tighter mt-3">136.6T</div>
+        <div id="difficulty-adjust" class="text-xs mt-1">
+          <span class="text-[#00ff9f]">+3.12%</span> 
+          <span class="text-white/40">NEXT ADJUSTMENT</span>
+        </div>
+      </div>
+
+      <div class="holo-card rounded-2xl p-6 border-l-2 border-[#ff00aa]">
+        <div class="section-title text-[#ff00aa]">NEXT HALVING</div>
+        <div id="halving-blocks" class="text-4xl font-bold mono tracking-tighter mt-3">98,488 <span class="text-base align-super text-white/50">BLOCKS</span></div>
+        <div id="halving-time" class="text-sm text-[#ff00aa]/80 mono mt-1">~682 DAYS • 14:22:09</div>
+      </div>
+    </div>
+
+    <!-- 30-DAY CHART -->
+    <div class="holo-card rounded-2xl p-7 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <div class="section-title">30-DAY PRICE TRAJECTORY</div>
+          <div class="text-xs text-white/40">COINGECKO • DAILY CLOSE</div>
+        </div>
+        <div class="text-xs px-3 py-1 rounded bg-white/5 border border-white/10 text-[#00f9ff]/70">CHROME VEIL • v4.2</div>
+      </div>
+      <div class="chart-container h-[280px]">
+        <canvas id="price-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- SAYLOR RECENT PURCHASES -->
+    <div class="holo-card rounded-2xl p-7">
+      <div class="flex justify-between items-center mb-4">
+        <div class="section-title">RECENT ACQUISITIONS — STRATEGY</div>
+        <div class="text-[10px] text-white/40">UPDATED WITH LIVE BTC PRICE</div>
+      </div>
+      <div id="saylor-purchases" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 text-sm">
+        <!-- Populated by Core Logic -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/10 bg-[#050508]/90 py-4">
+    <div class="max-w-[1480px] mx-auto px-8 flex items-center justify-between text-xs text-white/40">
+      <div>LOEWFIZZLE'S BITCOIN DASHBOARD • NEURAL-07 • FOR AUTHORIZED MEGACORP PERSONNEL ONLY</div>
+      <div class="mono">DATA SOURCES: COINGECKO • ALTERNATIVE.ME • MEMPOOL.SPACE</div>
+    </div>
+  </footer>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-[300] flex flex-col gap-2"></div>
+
+  <!-- FX Canvas -->
+  <canvas id="fx-canvas" class="fixed inset-0 pointer-events-none z-[150]"></canvas>
+
+  <script>
+    // =====================================================
+    // FULL MERGED DASHBOARD — UI + DATA + ANIMATION
+    // =====================================================
+
+    // Tailwind config
+    function initTailwind() {
+      document.documentElement.style.setProperty('--cyan', '#00f9ff');
+    }
+    initTailwind();
+
+    // =====================================================
+    // DATA INTEGRATION LAYER (from Data Agent)
+    // =====================================================
+    (function() {
+      window.DASH = {
+        price: 73291,
+        prevPrice: 73550,
+        priceChange: -0.44,
+        sats: 7329100000,
+        fng: { value: 23, classification: "Extreme Fear" },
+        network: {
+          blockHeight: 951512,
+          hashrate: 1.031139817418336e+21,
+          hashrateEH: "1031",
+          difficulty: 136607070854775.1,
+          difficultyT: "136.6",
+          nextAdjustment: 3.12
+        },
+        chartData: null,
+        saylor: { btc: 843738, avgCost: 41820 },
+        lastSync: null,
+        isSimMode: true
+      };
+
+      const simBanner = document.getElementById('sim-banner');
+
+      function setSimMode(active) {
+        window.DASH.isSimMode = active;
+        if (simBanner) simBanner.classList.toggle('hidden', !active);
+      }
+
+      function updateLastSync() {
+        window.DASH.lastSync = new Date();
+        const el = document.getElementById('last-sync');
+        if (el) {
+          el.textContent = 'LAST SYNC — ' + window.DASH.lastSync.toLocaleTimeString([], { 
+            hour: '2-digit', minute: '2-digit', second: '2-digit' 
+          });
+        }
+      }
+
+      function dispatchUpdate(type, payload) {
+        window.dispatchEvent(new CustomEvent('dashboard:update', {
+          detail: { type, payload, timestamp: Date.now() }
+        }));
+      }
+
+      // High quality mocks
+      function loadMockData() {
+        setSimMode(true);
+        dispatchUpdate('price', window.DASH);
+        dispatchUpdate('fng', window.DASH.fng);
+        dispatchUpdate('network', window.DASH.network);
+        updateLastSync();
+      }
+
+      window.DASH.simulateSaylorPurchase = function(btcAdded) {
+        window.DASH.saylor.btc += btcAdded;
+        dispatchUpdate('saylor', window.DASH.saylor);
+        return window.DASH.saylor.btc;
+      };
+
+      // Boot with mocks for now
+      setTimeout(() => {
+        loadMockData();
+        console.log('%c[Dashboard] Running on curated mock data for now', 'color:#ffd700');
+      }, 300);
+
+      window.DASH.recalibrate = function() {
+        loadMockData();
+      };
+    })();
+
+    // =====================================================
+    // ANIMATION & EFFECTS LAYER (from Animation Agent)
+    // =====================================================
+    (function() {
+      const DASH = window.DASH;
+      const priceEl = document.getElementById('price-usd');
+      const changeEl = document.getElementById('price-change');
+      const satsEl = document.getElementById('price-sats');
+      const gaugeSvg = document.getElementById('fng-gauge');
+      const fngValue = document.getElementById('fng-value');
+      const fngLabel = document.getElementById('fng-label');
+      const saylorBtc = document.getElementById('saylor-btc');
+      const saylorUsd = document.getElementById('saylor-usd');
+      const acquireBtn = document.getElementById('acquire-btn');
+      const toastContainer = document.getElementById('toast-container');
+      const fxCanvas = document.getElementById('fx-canvas');
+
+      let confettiCtx = null;
+      let particles = [];
+      let animFrame = null;
+
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+      // Price flashing
+      function flashPrice(isUp) {
+        if (!priceEl || !changeEl) return;
+        const flashClass = isUp ? 'price-flash-up' : 'price-flash-down';
+        const chevron = isUp ? '▲' : '▼';
+        const color = isUp ? '#00ff9f' : '#ff0033';
+
+        priceEl.classList.remove('price-flash-up', 'price-flash-down');
+        changeEl.innerHTML = `<span class="chevron" style="color:${color}">${chevron}</span> <span>${(DASH.priceChange || 0).toFixed(2)}%</span>`;
+
+        void priceEl.offsetWidth;
+        priceEl.classList.add(flashClass);
+
+        setTimeout(() => priceEl.classList.remove(flashClass), 450);
+      }
+
+      window.addEventListener('dashboard:update', (e) => {
+        const { type, payload } = e.detail;
+        if (type === 'price' && payload) {
+          if (priceEl) priceEl.textContent = '$' + payload.price.toLocaleString('en-US', { minimumFractionDigits: 2 });
+          if (satsEl && payload.sats) satsEl.textContent = payload.sats.toLocaleString('en-US') + ' sats';
+          if (payload.prevPrice != null && payload.price != null) {
+            flashPrice(payload.price > payload.prevPrice);
+          }
+        }
+        if (type === 'fng' && payload) {
+          updateGauge(payload.value);
+        }
+        if (type === 'saylor' && payload && saylorBtc) {
+          animateCounter(saylorBtc, payload.btc);
+        }
+      });
+
+      // Gauge
+      function createGauge() {
+        if (!gaugeSvg) return;
+        gaugeSvg.innerHTML = `
+          <defs>
+            <filter id="gaugeGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="coloredBlur"/>
+              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <linearGradient id="needleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#e0e7ff"/><stop offset="100%" stop-color="#00f9ff"/>
+            </linearGradient>
+          </defs>
+          <circle cx="105" cy="105" r="98" fill="none" stroke="#00f9ff" stroke-width="1" opacity="0.15"/>
+          <path d="M 105 105 L 105 17 A 88 88 0 0 1 158 29" fill="none" stroke="#ff0033" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <path d="M 158 29 A 88 88 0 0 1 190 78" fill="none" stroke="#ff6600" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <path d="M 190 78 A 88 88 0 0 1 190 132" fill="none" stroke="#ffd700" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <path d="M 190 132 A 88 88 0 0 1 158 181" fill="none" stroke="#00f9ff" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <path d="M 158 181 A 88 88 0 0 1 105 193" fill="none" stroke="#00ff9f" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+          <g id="needle-group" style="transition: transform 650ms cubic-bezier(0.23, 1.0, 0.32, 1); transform-origin: 105px 105px;">
+            <line x1="105" y1="105" x2="105" y2="32" stroke="url(#needleGrad)" stroke-width="4.5" stroke-linecap="round"/>
+            <circle cx="105" cy="30" r="5" fill="#00f9ff" filter="url(#gaugeGlow)" opacity="0.9"/>
+            <circle cx="105" cy="105" r="6" fill="#111118" stroke="#00f9ff" stroke-width="2"/>
+            <circle cx="105" cy="105" r="3" fill="#e0e7ff"/>
+          </g>
+        `;
+      }
+
+      function updateGauge(value) {
+        if (!gaugeSvg) return;
+        const needle = gaugeSvg.querySelector('#needle-group');
+        if (!needle) return;
+        const angle = -120 + (value / 100) * 240;
+        needle.style.transform = `rotate(${angle}deg)`;
+        if (fngValue) fngValue.textContent = value;
+        if (fngLabel) {
+          let label = 'NEUTRAL', color = '#ffd700';
+          if (value <= 25) { label = 'EXTREME FEAR'; color = '#ff0033'; }
+          else if (value <= 45) { label = 'FEAR'; color = '#ff6600'; }
+          else if (value <= 55) { label = 'NEUTRAL'; color = '#ffd700'; }
+          else if (value <= 75) { label = 'GREED'; color = '#00f9ff'; }
+          else { label = 'EXTREME GREED'; color = '#00ff9f'; }
+          fngLabel.textContent = label; fngLabel.style.color = color;
+        }
+      }
+
+      // Alien head
+      function driveAlienHead() {
+        const alien = document.getElementById('alien-head');
+        if (!alien) return;
+        alien.classList.add('pulse');
+        setInterval(() => {
+          alien.classList.add('glitch');
+          const orbs = alien.querySelectorAll('.alien-orb');
+          const pupils = alien.querySelectorAll('.alien-eye-slit');
+          const useCyan = Math.random() > 0.5;
+          const color = useCyan ? '#00f9ff' : '#ff00aa';
+          orbs.forEach(o => o.setAttribute('fill', color));
+          pupils.forEach(p => p.setAttribute('fill', color));
+          setTimeout(() => alien.classList.remove('glitch'), 90);
+        }, 2400);
+      }
+
+      // Confetti
+      function initConfetti() {
+        if (!fxCanvas) return;
+        fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight;
+        confettiCtx = fxCanvas.getContext('2d', { alpha: true });
+        window.addEventListener('resize', () => { fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight; });
+      }
+
+      function spawnConfettiBurst(x = window.innerWidth/2, y = window.innerHeight*0.35) {
+        if (!confettiCtx) return;
+        const colors = ['#00f9ff', '#ff00aa', '#ffd700', '#00ff9f'];
+        for (let i = 0; i < 110; i++) {
+          particles.push({
+            x, y,
+            vx: (Math.random()-0.5)*9,
+            vy: (Math.random()-0.5)*7-3,
+            size: Math.random()*5 + 2.5,
+            color: colors[Math.floor(Math.random()*colors.length)],
+            life: 90 + Math.random()*30,
+            gravity: 0.12 + Math.random()*0.08,
+            rotation: Math.random()*360,
+            rotSpeed: (Math.random()-0.5)*8
+          });
+        }
+        if (!animFrame) animateParticles();
+      }
+
+      function animateParticles() {
+        if (!confettiCtx || particles.length === 0) { animFrame = null; return; }
+        confettiCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+        particles = particles.filter(p => {
+          p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.vx *= 0.985; p.rotation += p.rotSpeed; p.life--;
+          confettiCtx.save();
+          confettiCtx.translate(p.x, p.y); confettiCtx.rotate(p.rotation * Math.PI / 180);
+          confettiCtx.fillStyle = p.color; confettiCtx.globalAlpha = Math.max(p.life / 110, 0.1);
+          confettiCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.6);
+          confettiCtx.restore();
+          return p.life > 0;
+        });
+        animFrame = requestAnimationFrame(animateParticles);
+      }
+
+      // Counter animation
+      function animateCounter(el, target, duration = 1400) {
+        if (!el) return;
+        const start = parseFloat(el.textContent.replace(/,/g,'')) || 0;
+        const startTime = performance.now();
+        function step(now) {
+          const progress = Math.min((now - startTime) / duration, 1);
+          const current = Math.floor(start + (target - start) * easeOutCubic(progress));
+          el.textContent = current.toLocaleString('en-US');
+          if (progress < 1) requestAnimationFrame(step);
+          else el.textContent = target.toLocaleString('en-US');
+        }
+        requestAnimationFrame(step);
+      }
+
+      // Toast
+      function showToast(message) {
+        if (!toastContainer) return;
+        const toast = document.createElement('div');
+        toast.className = `neural-toast px-5 py-3 rounded-xl border text-sm font-medium bg-[#0a0a12]/95 border-[#00f9ff]/40 text-[#00f9ff]`;
+        toast.innerHTML = `<div>${message}</div>`;
+        toastContainer.appendChild(toast);
+        setTimeout(() => { toast.style.transition = 'all 0.25s ease'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 2300);
+      }
+
+      // Acquire button
+      function wireAcquire() {
+        if (!acquireBtn) return;
+        acquireBtn.addEventListener('click', () => {
+          const added = Math.floor(Math.random() * 20000) + 8000;
+          const newTotal = DASH.simulateSaylorPurchase(added);
+          
+          if (saylorBtc) animateCounter(saylorBtc, newTotal);
+          if (saylorUsd) {
+            const usd = Math.floor(newTotal * DASH.price);
+            saylorUsd.textContent = '$' + (usd / 1e9).toFixed(2) + 'B';
+          }
+          
+          const rect = acquireBtn.getBoundingClientRect();
+          spawnConfettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
+          showToast('NEW PURCHASE — NEURAL UPLINK COMPLETE');
+
+          const flash = document.createElement('div');
+          flash.style.cssText = 'position:fixed;inset:0;background:linear-gradient(transparent,#ff00aa22,transparent);pointer-events:none;z-index:90;';
+          document.body.appendChild(flash);
+          setTimeout(() => flash.remove(), 380);
+        });
+      }
+
+      // Init everything
+      function initEffects() {
+        createGauge();
+        initConfetti();
+        driveAlienHead();
+        wireAcquire();
+
+        setTimeout(() => {
+          updateGauge(23);
+          if (saylorBtc) saylorBtc.textContent = '843,738';
+        }, 600);
+
+        window.DASH._fx = { flashPrice, updateGauge, spawnConfetti: spawnConfettiBurst, showToast, animateCounter };
+        console.log('%c[Animation] All cyberpunk effects active', 'color:#ff00aa');
+      }
+
+      initEffects();
+    })();
+  </script>
+</body>
+</html>
