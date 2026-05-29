@@ -530,7 +530,7 @@
           </div>
           <span id="chart-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
         </div>
-        <div class="text-xs px-3 py-1 rounded bg-white/5 border border-white/10 text-[#00f9ff]/70">CHROME VEIL • v4.2</div>
+
       </div>
       <div class="chart-container h-[220px] sm:h-[260px] lg:h-[280px]">
         <canvas id="price-chart"></canvas>
@@ -554,9 +554,17 @@
           <span id="network-freshness2" class="text-[10px] text-[#00ff9f]/60 mono"></span>
         </div>
         <div id="difficulty" class="text-4xl font-bold mono tracking-tighter mt-3">136.6T</div>
-        <div id="difficulty-adjust" class="text-xs mt-1">
-          <span class="text-[#00ff9f]">+3.12%</span> 
-          <span class="text-white/40">NEXT ADJUSTMENT</span>
+
+        <div class="mt-2 text-xs space-y-0.5">
+          <div>
+            <span id="difficulty-next-pct" class="text-[#00ff9f] font-medium">+3.12%</span>
+            <span class="text-white/40 ml-1">expected</span>
+          </div>
+          <div class="text-white/70">
+            <span id="diff-blocks-until">892</span> <span class="text-white/40">blocks</span>
+            <span class="mx-1 text-white/30">•</span>
+            <span id="diff-time-until">~6d 4h</span>
+          </div>
         </div>
       </div>
 
@@ -1124,7 +1132,7 @@
             hashrateEH: (hashrate / 1e18).toFixed(0),
             difficulty,
             difficultyT: (difficulty / 1e12).toFixed(1),
-            nextAdjustment: (adjustment * 100)
+            nextAdjustment: (adjustment - 1) * 100
           };
 
           recordFetchResult('network', true);
@@ -1132,6 +1140,7 @@
 
           dispatchUpdate('network', window.DASH.network);
           updateHalvingCountdown(height);
+          updateDifficultyCountdown(height);
           updateFreshnessIndicators();
         } catch (e) {
           recordFetchResult('network', false);
@@ -1161,6 +1170,39 @@
           } else {
             timeEl.textContent = `~${hours}h ${minutes}m`;
           }
+        }
+      }
+
+      function updateDifficultyCountdown(currentHeight) {
+        const blocksPerAdjustment = 2016;
+        const blocksUntil = blocksPerAdjustment - (currentHeight % blocksPerAdjustment);
+
+        // ~10 minutes per block
+        const totalMinutes = blocksUntil * 10;
+        const days = Math.floor(totalMinutes / 1440);
+        const hours = Math.floor((totalMinutes % 1440) / 60);
+
+        const blocksEl = document.getElementById('diff-blocks-until');
+        const timeEl = document.getElementById('diff-time-until');
+
+        if (blocksEl) {
+          blocksEl.textContent = blocksUntil.toLocaleString();
+        }
+
+        if (timeEl) {
+          if (days > 0) {
+            timeEl.textContent = `~${days}d ${hours}h`;
+          } else {
+            timeEl.textContent = `~${hours}h`;
+          }
+        }
+
+        // Also refresh the expected adjustment % from latest data if available
+        const pctEl = document.getElementById('difficulty-next-pct');
+        if (pctEl && window.DASH.network && window.DASH.network.nextAdjustment) {
+          const pct = window.DASH.network.nextAdjustment;
+          const sign = pct >= 0 ? '+' : '';
+          pctEl.textContent = `${sign}${pct.toFixed(2)}%`;
         }
       }
 
