@@ -372,12 +372,16 @@
           <span id="price-sats">1,000,000 sats</span>
           <span class="text-white/30 mx-2">•</span>
           <span class="text-xs">PER BTC</span>
+          <span id="price-freshness" class="ml-3 text-[10px] text-[#00ff9f]/60 mono"></span>
         </div>
       </div>
 
       <!-- FEAR & GREED GAUGE -->
       <div class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col items-center">
-        <div class="section-title mb-2 self-start">FEAR &amp; GREED INDEX</div>
+        <div class="flex items-center justify-between w-full">
+          <div class="section-title">FEAR &amp; GREED INDEX</div>
+          <span id="fng-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
         
         <div class="relative w-[160px] h-[160px] sm:w-[190px] sm:h-[190px] lg:w-[210px] lg:h-[210px] mt-1">
           <svg id="fng-gauge" width="100%" height="100%" viewBox="0 0 210 210" class="gauge-svg" style="max-width: 210px; max-height: 210px;">
@@ -436,13 +440,19 @@
     <!-- NETWORK STATS (moved beneath chart per user request) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="holo-card rounded-2xl p-6">
-        <div class="section-title">CURRENT HASH RATE</div>
+        <div class="flex justify-between items-start">
+          <div class="section-title">CURRENT HASH RATE</div>
+          <span id="network-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
         <div id="hashrate" class="text-4xl font-bold mono tracking-tighter mt-3">1,031 EH/s</div>
         <div id="hashrate-trend" class="text-xs text-[#00ff9f] mt-1">+7.2% (7D)</div>
       </div>
 
       <div class="holo-card rounded-2xl p-6">
-        <div class="section-title">CURRENT DIFFICULTY</div>
+        <div class="flex justify-between items-start">
+          <div class="section-title">CURRENT DIFFICULTY</div>
+          <span id="network-freshness2" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
         <div id="difficulty" class="text-4xl font-bold mono tracking-tighter mt-3">136.6T</div>
         <div id="difficulty-adjust" class="text-xs mt-1">
           <span class="text-[#00ff9f]">+3.12%</span> 
@@ -451,7 +461,10 @@
       </div>
 
       <div class="holo-card rounded-2xl p-6 border-l-2 border-[#ff00aa]">
-        <div class="section-title text-[#ff00aa]">NEXT HALVING</div>
+        <div class="flex justify-between items-start">
+          <div class="section-title text-[#ff00aa]">NEXT HALVING</div>
+          <span id="network-freshness3" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+        </div>
         <div id="halving-blocks" class="text-4xl font-bold mono tracking-tighter mt-3">98,488 <span class="text-base align-super text-white/50">BLOCKS</span></div>
         <div id="halving-time" class="text-sm text-[#ff00aa]/80 mono mt-1">~682 DAYS • 14:22:09</div>
       </div>
@@ -613,6 +626,49 @@
         chart:     { failures: 0, nextRetry: 0, lastSuccess: 0 }
       };
 
+      // Expose for UI indicators
+      window.DASH.health = endpointHealth;
+
+      function getDataAge(key) {
+        const ts = endpointHealth[key]?.lastSuccess || 0;
+        if (!ts) return { text: 'no data', color: '#ff0033' };
+
+        const ageSec = Math.floor((Date.now() - ts) / 1000);
+
+        if (ageSec < 90)  return { text: 'just now', color: '#00ff9f' };
+        if (ageSec < 300) return { text: `${Math.floor(ageSec/60)}m ago`, color: '#00ff9f' };
+        if (ageSec < 600) return { text: `${Math.floor(ageSec/60)}m ago`, color: '#ffd700' };
+        return { text: `${Math.floor(ageSec/60)}m ago`, color: '#ff6600' };
+      }
+
+      function updateFreshnessIndicators() {
+        // Price
+        const priceFresh = document.getElementById('price-freshness');
+        if (priceFresh) {
+          const age = getDataAge('price');
+          priceFresh.textContent = age.text;
+          priceFresh.style.color = age.color;
+        }
+
+        // Fear & Greed
+        const fngFresh = document.getElementById('fng-freshness');
+        if (fngFresh) {
+          const age = getDataAge('fng');
+          fngFresh.textContent = age.text;
+          fngFresh.style.color = age.color;
+        }
+
+        // Network stats (we use the same age for all three cards for simplicity)
+        const netAge = getDataAge('network');
+        ['network-freshness', 'network-freshness2', 'network-freshness3'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.textContent = netAge.text;
+            el.style.color = netAge.color;
+          }
+        });
+      }
+
       const MAX_BACKOFF = 5 * 60 * 1000; // 5 minutes max
 
       function shouldSkipFetch(key) {
@@ -669,6 +725,7 @@
           window.DASH.sats = Math.floor(data.usd * 100000000);
           window.DASH.prevPrice = prev;
           dispatchUpdate('price', window.DASH);
+          updateFreshnessIndicators();
         }
         updateLastSync();
       }
@@ -681,6 +738,7 @@
         if (data) {
           window.DASH.fng = data;
           dispatchUpdate('fng', data);
+          updateFreshnessIndicators();
         }
       }
 
@@ -716,6 +774,7 @@
 
           dispatchUpdate('network', window.DASH.network);
           updateHalvingCountdown(height);
+          updateFreshnessIndicators();
         } catch (e) {
           recordFetchResult('network', false);
           setSimMode(true);
@@ -805,6 +864,7 @@
           recordFetchResult('chart', true);
           const anyFailing = Object.values(endpointHealth).some(h => h.failures > 0);
           setSimMode(anyFailing);
+          updateFreshnessIndicators();
         } catch (e) {
           recordFetchResult('chart', false);
           setSimMode(true);
@@ -869,12 +929,14 @@
       // Initial boot
       setTimeout(() => {
         startLiveUpdates();
+        updateFreshnessIndicators();
       }, 400);
 
       // Periodically refresh the "data age" display even when no new fetches succeed
       setInterval(() => {
         if (document.getElementById('last-sync')) {
           updateLastSync();
+          updateFreshnessIndicators();
         }
       }, 30000); // every 30 seconds
 
