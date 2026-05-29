@@ -1307,13 +1307,14 @@
         updateLivePrice();
         updateFearGreed();
         updateNetworkStats();
-        updateChart();
+        updateChart();           // Fetch once on load (daily data doesn't need frequent refreshes)
         renderSaylorPurchases();
 
-        setInterval(updateLivePrice, 13000);
+        setInterval(updateLivePrice, 30000);      // 30s is still very live for price
         setInterval(updateFearGreed, 240000);
         setInterval(updateNetworkStats, 48000);
-        setInterval(updateChart, 480000);
+        // Chart = daily closes for last 30 days. No need for frequent "live" updates.
+        // It only refreshes on initial load and when user clicks RECALIBRATE.
 
         updateLastSync();
         console.log('%c[Core Logic] Live Bitcoin data engine started', 'color:#00ff9f');
