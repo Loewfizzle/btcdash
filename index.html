@@ -550,6 +550,20 @@
       </div>
     </div>
 
+    <!-- BITCOIN ETF NET FLOWS (under the Exchange Balance Tracker) -->
+    <div id="etf-flows-section" class="holo-card rounded-2xl p-7 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <div class="section-title">BITCOIN ETF NET FLOWS</div>
+          <div class="text-xs text-white/40">PRICE vs DAILY NET INFLOW / OUTFLOW (30D) • ILLUSTRATIVE</div>
+        </div>
+        <span id="etf-flows-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
+      </div>
+      <div class="chart-container h-[180px] sm:h-[210px] lg:h-[230px]">
+        <canvas id="etf-flows-chart"></canvas>
+      </div>
+    </div>
+
     <!-- NETWORK STATS (moved beneath chart per user request) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="holo-card rounded-2xl p-6 hover:border-[#00f9ff]/40 transition">
@@ -1346,6 +1360,9 @@
 
         // Also initialize the Exchange Balance Tracker once we have price data
         initExchangeBalanceTracker(prices);
+
+        // Initialize the new ETF Flows combo chart
+        initETFFlowsChart(prices);
       }
 
       // Bitcoin Exchange Balance Tracker (dual axis: Price + BTC on Exchanges)
@@ -1485,6 +1502,163 @@
             .catch(() => {
               // silent fail - chart will just not render data
             });
+        }
+      }
+
+      // Bitcoin ETF Net Flows Combo Chart
+      //
+      // Shows Bitcoin price (blue line) overlaid on daily net ETF flows (bars).
+      // Positive bars (inflows) = blue and extend upward.
+      // Negative bars (outflows) = pink and extend downward.
+      //
+      // Note: ETF flow data is illustrative/realistic sample data because there is
+      // no simple free CORS-friendly historical API for aggregated daily flows.
+      // In a production setting this would come from Farside Investors, Glassnode,
+      // or a similar paid data provider.
+      let etfFlowsChartInstance = null;
+
+      function initETFFlowsChart(priceData) {
+        const canvas = document.getElementById('etf-flows-chart');
+        if (!canvas) return;
+
+        const doCreate = (prices) => {
+          if (!prices || prices.length < 5) return;
+
+          const labels = prices.map(p => new Date(p[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+          const priceValues = prices.map(p => p[1]);
+
+          // Generate realistic 30-day ETF net flow data (in USD millions)
+          // Positive = inflow (blue bars), Negative = outflow (pink bars)
+          const flowValues = [];
+          for (let i = 0; i < prices.length; i++) {
+            // Mix of inflows and outflows with some bigger days
+            let flow = (Math.random() - 0.45) * 280; // centered a bit positive
+            if (Math.random() < 0.15) flow *= 1.8; // occasional large flows
+            flowValues.push(Math.round(flow * 10) / 10);
+          }
+
+          // Prepare bar colors based on sign
+          const barColors = flowValues.map(v => v >= 0 ? '#00f9ff' : '#ff00aa');
+
+          if (etfFlowsChartInstance) {
+            etfFlowsChartInstance.destroy();
+          }
+
+          etfFlowsChartInstance = new Chart(canvas, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  type: 'line',
+                  label: 'BTC Price (USD)',
+                  data: priceValues,
+                  borderColor: '#00f9ff',
+                  borderWidth: 2.5,
+                  tension: 0.35,
+                  fill: true,
+                  backgroundColor: 'rgba(0, 249, 255, 0.08)',
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
+                  pointHoverBackgroundColor: '#ff00aa',
+                  yAxisID: 'yPrice',
+                  order: 1
+                },
+                {
+                  type: 'bar',
+                  label: 'ETF Net Flows ($M)',
+                  data: flowValues,
+                  backgroundColor: barColors,
+                  borderColor: barColors,
+                  borderWidth: 1,
+                  yAxisID: 'yFlows',
+                  order: 2
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                  labels: {
+                    color: 'rgba(224, 231, 255, 0.75)',
+                    font: { size: 11 },
+                    boxWidth: 12,
+                    padding: 12
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#0a0a12',
+                  borderColor: '#00f9ff',
+                  borderWidth: 1,
+                  titleColor: '#00f9ff',
+                  bodyColor: '#e0e7ff',
+                  displayColors: false,
+                  callbacks: {
+                    label: (ctx) => {
+                      if (ctx.dataset.yAxisID === 'yFlows') {
+                        const val = ctx.raw;
+                        return (val >= 0 ? '+' : '') + val + 'M';
+                      }
+                      return '$' + ctx.raw.toLocaleString();
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                  ticks: { color: 'rgba(224, 231, 255, 0.6)', font: { size: 10 } }
+                },
+                yPrice: {
+                  type: 'linear',
+                  position: 'left',
+                  grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                  ticks: {
+                    color: 'rgba(224, 231, 255, 0.6)',
+                    font: { size: 10 },
+                    callback: v => '$' + (v / 1000) + 'k'
+                  }
+                },
+                yFlows: {
+                  type: 'linear',
+                  position: 'right',
+                  grid: { drawOnChartArea: false },
+                  ticks: {
+                    color: 'rgba(224, 231, 255, 0.6)',
+                    font: { size: 10 },
+                    callback: v => (v >= 0 ? '+' : '') + v + 'M'
+                  }
+                }
+              },
+              elements: {
+                line: { tension: 0.35 },
+                point: { hitRadius: 20 },
+                bar: { borderWidth: 1 }
+              }
+            }
+          });
+
+          const freshness = document.getElementById('etf-flows-freshness');
+          if (freshness) {
+            freshness.textContent = 'just now';
+            freshness.style.color = '#00ff9f';
+          }
+        };
+
+        // Reuse price data if available (same pattern as the other tracker)
+        if (priceData && priceData.length > 5) {
+          doCreate(priceData);
+        } else if (window.DASH && window.DASH.chartData && window.DASH.chartData.length > 5) {
+          doCreate(window.DASH.chartData);
+        } else {
+          fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily')
+            .then(r => r.json())
+            .then(d => doCreate(d.prices || []))
+            .catch(() => {});
         }
       }
 
@@ -1767,20 +1941,24 @@
         const saylorCard = document.getElementById('saylor-card');
         const chartSection = document.getElementById('chart-section');
         const halvingCard = document.getElementById('halving-card');
-        const exchangeBalanceSection = document.getElementById('exchange-balance-section'); // New: Bitcoin Exchange Balance Tracker
+        const exchangeBalanceSection = document.getElementById('exchange-balance-section'); // Bitcoin Exchange Balance Tracker
+        const etfFlowsSection = document.getElementById('etf-flows-section');               // New: Bitcoin ETF Net Flows
         const heroGrid = document.querySelector('.lg\\:grid-cols-12');
 
-        if (!priceCard || !saylorCard || !chartSection || !halvingCard || !exchangeBalanceSection || !heroGrid) return;
+        if (!priceCard || !saylorCard || !chartSection || !halvingCard || !exchangeBalanceSection || !etfFlowsSection || !heroGrid) return;
 
         if (isMobile) {
           // Move 30-day chart right after price
           if (chartSection.previousElementSibling !== priceCard) {
             priceCard.after(chartSection);
           }
-          // NEW: Move Bitcoin Exchange Balance Tracker immediately after the 30-day chart
-          // This places it above Fear & Greed on mobile only, per user request.
+          // Move Bitcoin Exchange Balance Tracker immediately after the 30-day chart
           if (exchangeBalanceSection.previousElementSibling !== chartSection) {
             chartSection.after(exchangeBalanceSection);
+          }
+          // Move new ETF Flows chart right after the Exchange Balance Tracker (user request)
+          if (etfFlowsSection.previousElementSibling !== exchangeBalanceSection) {
+            exchangeBalanceSection.after(etfFlowsSection);
           }
           // Move Saylor right after Halving
           if (saylorCard.previousElementSibling !== halvingCard) {
@@ -1799,6 +1977,10 @@
           // Restore new Exchange Balance Tracker to its original position (after 30-day chart)
           if (exchangeBalanceSection.previousElementSibling !== chartSection) {
             chartSection.after(exchangeBalanceSection);
+          }
+          // Restore ETF Flows chart to its original position (after Exchange Balance Tracker)
+          if (etfFlowsSection.previousElementSibling !== exchangeBalanceSection) {
+            exchangeBalanceSection.after(etfFlowsSection);
           }
         }
       }
