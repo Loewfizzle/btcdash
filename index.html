@@ -339,6 +339,63 @@
 
     /* Debug panel is self-contained (fixed + inline styles) for zero new global CSS bloat */
 
+    /* ============================================
+       SEASONALITY TABLE — CYBERPUNK NEON
+       Mobile-first with sticky year column
+       ============================================ */
+    .seasonality-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-feature-settings: "tnum";
+    }
+    .seasonality-table th {
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: rgba(0, 249, 255, 0.6);
+      text-transform: uppercase;
+      padding: 6px 4px;
+      background: #11111a;
+      font-weight: 600;
+    }
+    .seasonality-table td {
+      padding: 6px 4px;
+      text-align: center;
+      transition: all 0.1s cubic-bezier(0.23, 1, 0.32, 1);
+      min-width: 52px;
+      font-size: 12px;
+    }
+    .seasonality-table th.year,
+    .seasonality-table td.year {
+      position: sticky;
+      left: 0;
+      z-index: 10;
+      background: #0a0a12;
+      text-align: left;
+      padding-left: 10px;
+      font-weight: 700;
+      color: #00f9ff;
+      box-shadow: 3px 0 8px rgba(0,0,0,0.5);
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    .seasonality-cell {
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .seasonality-cell:hover {
+      background: rgba(255,255,255,0.05);
+      transform: scale(1.04);
+    }
+    .seasonality-cell:active {
+      transform: scale(0.98);
+    }
+    .seasonality-cell.selected {
+      box-shadow: 0 0 0 1px #00f9ff, 0 0 12px rgba(0,249,255,0.4);
+      background: rgba(0,249,255,0.08);
+    }
+    .table-scroll {
+      -webkit-overflow-scrolling: touch;
+    }
+
   </style>
 </head>
 <body class="neural-bg text-[#e0e7ff] overflow-x-hidden">
@@ -560,6 +617,64 @@
       </div>
       <div class="chart-container h-[220px] sm:h-[260px] lg:h-[280px]">
         <canvas id="price-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- BITCOIN MONTHLY SEASONALITY TABLE -->
+    <div class="mb-8">
+      <div class="holo-card rounded-2xl p-5 sm:p-6">
+        <div class="mb-3">
+          <div class="section-title">SEASONALITY</div>
+          <div class="text-2xl sm:text-3xl font-black tracking-[-1px]">BITCOIN MONTHLY RETURNS</div>
+          <p class="text-[10px] text-white/50 mt-0.5">2017–2026 • Newest year at top • Tap any cell for details</p>
+        </div>
+
+        <!-- Legend -->
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-1 text-[10px] mb-3 text-white/60">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-sm bg-[#00f9ff]"></span>
+            <span>Positive (cyan • brighter = larger gain)</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-sm bg-[#ff00aa]"></span>
+            <span>Negative (magenta • stronger = larger loss)</span>
+          </div>
+        </div>
+
+        <!-- Scrollable Table with sticky year -->
+        <div class="table-scroll overflow-x-auto -mx-1 px-1 border border-white/10 rounded-xl">
+          <table class="seasonality-table w-full min-w-[900px]">
+            <thead>
+              <tr>
+                <th class="year text-left">YEAR</th>
+                <th>JAN</th>
+                <th>FEB</th>
+                <th>MAR</th>
+                <th>APR</th>
+                <th>MAY</th>
+                <th>JUN</th>
+                <th>JUL</th>
+                <th>AUG</th>
+                <th>SEP</th>
+                <th>OCT</th>
+                <th>NOV</th>
+                <th>DEC</th>
+              </tr>
+            </thead>
+            <tbody id="seasonality-body" class="text-white/90">
+              <!-- JS populated -->
+            </tbody>
+            <tfoot id="seasonality-avg" class="text-[10px] text-white/50 border-t border-white/10">
+              <!-- Historical avg row -->
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Selection / Details -->
+        <div id="seasonality-selection" 
+             class="mt-3 hidden rounded-xl border border-white/10 bg-black/30 p-3 text-xs font-mono">
+          <!-- Populated on cell click -->
+        </div>
       </div>
     </div>
 
@@ -1607,6 +1722,190 @@
 
       // Call debug init (safe even if panel markup missing)
       setTimeout(initDebugPanel, 1200);
+
+      // =====================================================
+      // BITCOIN SEASONALITY TABLE (self-contained, cyberpunk)
+      // =====================================================
+      const btcSeasonalityData = {
+        2026: { JAN: -10.05, FEB: -14.88, MAR: 1.83, APR: 11.81, MAY: -3.53, JUN: -13.01, JUL: "—", AUG: "—", SEP: "—", OCT: "—", NOV: "—", DEC: "—" },
+        2025: { JAN: 9.51, FEB: -17.54, MAR: -2.28, APR: 14.21, MAY: 11.09, JUN: 2.34, JUL: 8.00, AUG: -6.44, SEP: 5.33, OCT: -3.90, NOV: -17.49, DEC: -3.19 },
+        2024: { JAN: 0.78, FEB: 43.63, MAR: 15.80, APR: -14.36, MAY: 11.07, JUN: -7.03, JUL: 3.10, AUG: -8.84, SEP: 7.26, OCT: 11.10, NOV: 37.36, DEC: -3.11 },
+        2023: { JAN: 39.98, FEB: 0.07, MAR: 23.20, APR: 2.97, MAY: -7.30, JUN: 12.00, JUL: -4.15, AUG: -11.17, SEP: 3.94, OCT: 28.39, NOV: 8.88, DEC: 12.22 },
+        2022: { JAN: -17.03, FEB: 12.26, MAR: 5.52, APR: -17.23, MAY: -15.60, JUN: -39.26, JUL: 20.81, AUG: -14.26, SEP: -2.94, OCT: 5.43, NOV: -16.17, DEC: -3.80 },
+        2021: { JAN: 14.25, FEB: 36.80, MAR: 29.61, APR: -1.79, MAY: -35.38, JUN: -6.02, JUL: 19.19, AUG: 12.98, SEP: -7.28, OCT: 40.32, NOV: -7.06, DEC: -18.81 },
+        2020: { JAN: 30.55, FEB: -8.28, MAR: -25.05, APR: 34.51, MAY: 9.03, JUN: -3.07, JUL: 24.00, AUG: 3.00, SEP: -7.76, OCT: 28.17, NOV: 42.42, DEC: 47.59 },
+        2019: { JAN: -27.81, FEB: 2.56, MAR: -32.84, APR: 33.32, MAY: -18.96, JUN: -14.75, JUL: 21.17, AUG: -9.06, SEP: -5.99, OCT: -4.51, NOV: -36.99, DEC: -7.20 },
+        2018: { JAN: -0.05, FEB: 22.71, MAR: -8.97, APR: 27.75, MAY: 66.39, JUN: 6.67, JUL: 16.71, AUG: 65.60, SEP: -8.56, OCT: 48.31, NOV: 55.51, DEC: 39.26 },
+        2017: { JAN: -0.05, FEB: 22.71, MAR: -8.97, APR: 27.75, MAY: 66.39, JUN: 6.67, JUL: 16.71, AUG: 65.60, SEP: -8.56, OCT: 48.31, NOV: 55.51, DEC: 39.26 }
+      };
+      const SEASONALITY_MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      let seasonalitySelectedCell = null;
+
+      function getSeasonalityNeonStyle(value) {
+        if (value === "—") {
+          return { color: 'rgba(255,255,255,0.25)', textShadow: 'none' };
+        }
+        const num = parseFloat(value);
+        const abs = Math.abs(num);
+        const isPos = num >= 0;
+        const intensity = Math.min(abs / 68, 1);
+        let color, glow;
+        if (isPos) {
+          const alpha = 0.65 + intensity * 0.35;
+          color = `rgba(0, 249, 255, ${alpha})`;
+          glow = `rgba(0, 249, 255, ${0.35 + intensity * 0.55})`;
+        } else {
+          const alpha = 0.65 + intensity * 0.35;
+          color = `rgba(255, 0, 170, ${alpha})`;
+          glow = `rgba(255, 0, 170, ${0.35 + intensity * 0.55})`;
+        }
+        const blur1 = 3 + intensity * 7;
+        const blur2 = 6 + intensity * 14;
+        const textShadow = `0 0 ${blur1}px ${glow}, 0 0 ${blur2}px ${glow}`;
+        return { color, textShadow };
+      }
+
+      function renderSeasonalityTable() {
+        const tbody = document.getElementById('seasonality-body');
+        const tfoot = document.getElementById('seasonality-avg');
+        if (!tbody || !tfoot) return;
+
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        const years = Object.keys(btcSeasonalityData).map(Number).sort((a, b) => b - a);
+
+        years.forEach(year => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-white/10 hover:bg-white/[0.025] transition-colors';
+
+          const yearTd = document.createElement('td');
+          yearTd.className = 'year px-3 py-2 text-[#00f9ff] font-bold bg-[#0a0a12]';
+          yearTd.textContent = year;
+          tr.appendChild(yearTd);
+
+          SEASONALITY_MONTHS.forEach(month => {
+            const raw = btcSeasonalityData[year][month];
+            const td = document.createElement('td');
+            td.className = 'seasonality-cell px-1.5 py-1.5 sm:px-2 sm:py-2';
+
+            if (raw === "—") {
+              td.textContent = "—";
+              td.style.color = 'rgba(255,255,255,0.25)';
+              td.style.fontWeight = '400';
+            } else {
+              const num = parseFloat(raw);
+              const style = getSeasonalityNeonStyle(num);
+              td.style.color = style.color;
+              td.style.textShadow = style.textShadow;
+              td.textContent = (num >= 0 ? '+' : '') + num.toFixed(2) + '%';
+              td.dataset.year = year;
+              td.dataset.month = month;
+              td.dataset.value = num;
+              td.addEventListener('click', () => handleSeasonalityCellClick(td, year, month, num));
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+        // Average row
+        renderSeasonalityAverages(tfoot, years);
+      }
+
+      function renderSeasonalityAverages(tfoot, years) {
+        const tr = document.createElement('tr');
+        tr.className = 'text-[10px] text-white/50';
+
+        const label = document.createElement('td');
+        label.className = 'year px-3 py-1.5 font-semibold text-[#00f9ff]/70 bg-[#11111a]';
+        label.textContent = 'AVG';
+        tr.appendChild(label);
+
+        SEASONALITY_MONTHS.forEach(month => {
+          let sum = 0, count = 0;
+          years.forEach(y => {
+            const v = btcSeasonalityData[y][month];
+            if (v !== "—") {
+              const n = parseFloat(v);
+              if (!isNaN(n)) { sum += n; count++; }
+            }
+          });
+          const td = document.createElement('td');
+          td.className = 'seasonality-cell px-1.5 py-1 bg-[#11111a]';
+          if (count === 0) {
+            td.textContent = "—";
+            td.style.color = 'rgba(255,255,255,0.2)';
+          } else {
+            const avg = sum / count;
+            const style = getSeasonalityNeonStyle(avg);
+            td.style.color = style.color;
+            td.style.textShadow = style.textShadow;
+            td.textContent = (avg >= 0 ? '+' : '') + avg.toFixed(2) + '%';
+          }
+          tr.appendChild(td);
+        });
+        tfoot.appendChild(tr);
+      }
+
+      function handleSeasonalityCellClick(td, year, month, value) {
+        const bar = document.getElementById('seasonality-selection');
+        if (!bar) return;
+
+        if (seasonalitySelectedCell) {
+          seasonalitySelectedCell.classList.remove('selected');
+        }
+
+        if (seasonalitySelectedCell === td) {
+          clearSeasonalitySelection();
+          return;
+        }
+
+        seasonalitySelectedCell = td;
+        td.classList.add('selected');
+
+        const isPos = value >= 0;
+        const color = isPos ? '#00f9ff' : '#ff00aa';
+
+        bar.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[#00f9ff] text-[10px] tracking-[1.5px]">${year} • ${month}</span>
+              <div style="color:${color}; font-size:15px; font-weight:700; line-height:1;" class="mono mt-0.5">
+                ${value >= 0 ? '+' : ''}${value.toFixed(2)}%
+              </div>
+            </div>
+            <button onclick="clearSeasonalitySelection()" class="text-[10px] px-2 py-0.5 border border-white/20 hover:border-white/40 rounded active:scale-95">CLEAR</button>
+          </div>
+        `;
+        bar.style.display = 'block';
+      }
+
+      function clearSeasonalitySelection() {
+        const bar = document.getElementById('seasonality-selection');
+        if (seasonalitySelectedCell) {
+          seasonalitySelectedCell.classList.remove('selected');
+          seasonalitySelectedCell = null;
+        }
+        if (bar) {
+          bar.style.display = 'none';
+          bar.innerHTML = '';
+        }
+      }
+
+      // Boot the seasonality table
+      setTimeout(() => {
+        renderSeasonalityTable();
+        // Optional: clear on outside click
+        const container = document.querySelector('#seasonality-body');
+        if (container) {
+          container.parentElement.addEventListener('click', (e) => {
+            if (e.target.tagName === 'TABLE' || e.target.tagName === 'TBODY') {
+              clearSeasonalitySelection();
+            }
+          });
+        }
+      }, 800);
     })();
 
     // =====================================================
