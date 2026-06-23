@@ -58,14 +58,44 @@
        ============================================ */
 
     :root {
-      --cyan: #00f9ff;
-      --magenta: #ff00aa;
+      --accent-rgb: 0 249 255;     /* BTC primary (cyan)     */
+      --accent2-rgb: 255 0 170;    /* BTC secondary (magenta)*/
+      --cyan: rgb(var(--accent-rgb));
+      --magenta: rgb(var(--accent2-rgb));
       --lime: #00ff9f;
       --red: #ff0033;
       --gold: #ffd700;
       --void: #050508;
       --panel: #0a0a12;
     }
+    body[data-asset="ETH"] {
+      --accent-rgb: 255 45 149;    /* ETH primary (hot pink) */
+      --accent2-rgb: 168 85 255;   /* ETH secondary (violet) */
+    }
+
+    /* Hide Bitcoin-only panels (hashrate, difficulty, halving, Saylor) when ETH is active */
+    body[data-asset="ETH"] .btc-only { display: none !important; }
+
+    /* Reflow hero row on ETH: with Saylor hidden, rebalance surviving cards to 8 + 4 = 12 */
+    body[data-asset="ETH"] #price-card { grid-column: span 8 / span 8; }
+    body[data-asset="ETH"] #fng-card   { grid-column: span 4 / span 4; }
+
+    /* Theme-aware accent utilities for header/ticker chrome (follow the active asset color) */
+    .ta-50     { color: rgb(var(--accent-rgb) / 0.5); }
+    .ta-55     { color: rgb(var(--accent-rgb) / 0.55); }
+    .ta-70     { color: rgb(var(--accent-rgb) / 0.7); }
+    .ta-bd-40  { border-color: rgb(var(--accent-rgb) / 0.4); }
+    .ta-h:hover     { color: rgb(var(--accent-rgb)); }
+    .ta-bd-h:hover  { border-color: rgb(var(--accent-rgb)); }
+
+    /* Asset toggle (BTC/ETH tabs — each tab keeps its own color so the toggle doubles as a legend) */
+    .asset-toggle { display:flex; align-items:center; overflow:hidden; border:1px solid rgb(var(--accent-rgb)/0.4); border-radius:6px; }
+    .asset-tab { padding:4px 10px; font-size:10px; letter-spacing:1px; font-family:monospace; background:transparent; cursor:pointer; transition:all .2s; border:none; }
+    .asset-tab[data-asset="BTC"] { --tab-rgb: 0 249 255; }
+    .asset-tab[data-asset="ETH"] { --tab-rgb: 255 45 149; }
+    .asset-tab { color: rgb(var(--tab-rgb) / 0.45); }
+    .asset-tab:hover { color: rgb(var(--tab-rgb) / 0.85); }
+    .asset-tab.active { color: rgb(var(--tab-rgb)); background: rgb(var(--tab-rgb) / 0.15); text-shadow: 0 0 8px rgb(var(--tab-rgb) / 0.6); }
 
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -86,9 +116,9 @@
 
     /* Subtle perspective grid */
     .grid-overlay {
-      background-image: 
-        linear-gradient(rgba(0, 249, 255, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 249, 255, 0.06) 1px, transparent 1px);
+      background-image:
+        linear-gradient(rgb(var(--accent-rgb) / 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(var(--accent-rgb) / 0.06) 1px, transparent 1px);
       background-size: 42px 42px;
       pointer-events: none;
     }
@@ -101,8 +131,8 @@
         to bottom,
         transparent 0px,
         transparent 3px,
-        rgba(0, 249, 255, 0.035) 3px,
-        rgba(0, 249, 255, 0.035) 4px
+        rgb(var(--accent-rgb) / 0.035) 3px,
+        rgb(var(--accent-rgb) / 0.035) 4px
       );
       pointer-events: none;
       z-index: 100;
@@ -118,20 +148,20 @@
     .holo-card {
       background: rgba(10, 10, 18, 0.82);
       backdrop-filter: blur(20px);
-      border: 1px solid rgba(0, 249, 255, 0.25);
-      box-shadow: 
-        0 0 0 1px rgba(0, 249, 255, 0.08),
+      border: 1px solid rgb(var(--accent-rgb) / 0.25);
+      box-shadow:
+        0 0 0 1px rgb(var(--accent-rgb) / 0.08),
         0 8px 32px rgba(0, 0, 0, 0.6),
         inset 0 1px 0 rgba(255,255,255,0.06);
       transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
     }
 
     .holo-card:hover {
-      border-color: rgba(0, 249, 255, 0.55);
-      box-shadow: 
-        0 0 0 1px rgba(0, 249, 255, 0.15),
-        0 0 25px rgba(0, 249, 255, 0.15),
-        0 0 50px rgba(255, 0, 170, 0.08),
+      border-color: rgb(var(--accent-rgb) / 0.55);
+      box-shadow:
+        0 0 0 1px rgb(var(--accent-rgb) / 0.15),
+        0 0 25px rgb(var(--accent-rgb) / 0.15),
+        0 0 50px rgb(var(--accent2-rgb) / 0.08),
         0 12px 48px rgba(0, 0, 0, 0.7);
     }
 
@@ -139,7 +169,7 @@
       font-size: 10px;
       letter-spacing: 2.5px;
       font-weight: 600;
-      color: rgba(0, 249, 255, 0.65);
+      color: rgb(var(--accent-rgb) / 0.65);
       text-transform: uppercase;
     }
 
@@ -190,9 +220,9 @@
 
     /* === FEAR & GREED SPECTRUM (horizontal bar + neon marker) === */
     #fng-value {
-      text-shadow: 
-        0 0 6px rgba(0, 249, 255, 0.7),
-        0 0 16px rgba(0, 249, 255, 0.35);
+      text-shadow:
+        0 0 6px rgb(var(--accent-rgb) / 0.7),
+        0 0 16px rgb(var(--accent-rgb) / 0.35);
       letter-spacing: -1.5px;
     }
 
@@ -203,9 +233,9 @@
     #hashrate,
     #difficulty,
     #halving-blocks {
-      text-shadow: 
-        0 0 6px rgba(0, 249, 255, 0.7),
-        0 0 16px rgba(0, 249, 255, 0.35);
+      text-shadow:
+        0 0 6px rgb(var(--accent-rgb) / 0.7),
+        0 0 16px rgb(var(--accent-rgb) / 0.35);
     }
 
     #fng-label {
@@ -351,7 +381,7 @@
     .seasonality-table th {
       font-size: 9px;
       letter-spacing: 1.5px;
-      color: rgba(0, 249, 255, 0.6);
+      color: rgb(var(--accent-rgb) / 0.6);
       text-transform: uppercase;
       padding: 6px 4px;
       background: #11111a;
@@ -373,7 +403,7 @@
       text-align: left;
       padding-left: 10px;
       font-weight: 700;
-      color: #00f9ff;
+      color: rgb(var(--accent-rgb));
       box-shadow: 3px 0 8px rgba(0,0,0,0.5);
       border-right: 1px solid rgba(255,255,255,0.08);
     }
@@ -389,8 +419,8 @@
       transform: scale(0.98);
     }
     .seasonality-cell.selected {
-      box-shadow: 0 0 0 1px #00f9ff, 0 0 12px rgba(0,249,255,0.4);
-      background: rgba(0,249,255,0.08);
+      box-shadow: 0 0 0 1px rgb(var(--accent-rgb)), 0 0 12px rgb(var(--accent-rgb) / 0.4);
+      background: rgb(var(--accent-rgb) / 0.08);
     }
     .table-scroll {
       -webkit-overflow-scrolling: touch;
@@ -470,7 +500,7 @@
           <span class="text-white">EWFIZZLE'S</span>
         </div>
         <!-- Smaller subtitle on mobile so it never crowds or sits behind logo text -->
-        <div class="text-[8px] sm:text-[9px] lg:text-[10px] leading-none font-medium tracking-[1px] text-[#00f9ff]/55 mt-0.5">BITCOIN DASHBOARD</div>
+        <div id="dash-subtitle" class="text-[8px] sm:text-[9px] lg:text-[10px] leading-none font-medium tracking-[1px] ta-55 mt-0.5">BITCOIN DASHBOARD</div>
       </div>
 
       <!-- Right controls: compact on mobile, no horizontal overflow -->
@@ -487,10 +517,15 @@
           LIVE
         </div>
 
-        <div class="text-[9px] sm:text-[10px] text-[#00f9ff]/50 mono truncate max-w-[78px] sm:max-w-none" id="last-sync">SYNC — —</div>
+        <div class="text-[9px] sm:text-[10px] ta-50 mono truncate max-w-[78px] sm:max-w-none" id="last-sync">SYNC — —</div>
 
-        <button onclick="window.DASH?.recalibrate?.()" 
-                class="px-2 py-1 text-[8px] sm:text-[9px] tracking-[1px] border border-[#00f9ff]/40 text-[#00f9ff]/70 hover:text-[#00f9ff] hover:border-[#00f9ff] rounded transition active:scale-95 touch-manipulation whitespace-nowrap">
+        <div id="asset-toggle" class="asset-toggle mono">
+          <button data-asset="BTC" class="asset-tab">BTC</button>
+          <button data-asset="ETH" class="asset-tab">ETH</button>
+        </div>
+
+        <button onclick="window.DASH?.recalibrate?.()"
+                class="px-2 py-1 text-[8px] sm:text-[9px] tracking-[1px] border ta-bd-40 ta-70 ta-h ta-bd-h rounded transition active:scale-95 touch-manipulation whitespace-nowrap">
           RECAL
         </button>
       </div>
@@ -518,12 +553,12 @@
             <span class="chevron">▼</span>
             <span>-0.44%</span>
           </div>
-          <div class="text-[#00f9ff]/50 text-sm">24H</div>
+          <div class="ta-50 text-sm">24H</div>
         </div>
       </div>
 
       <!-- FEAR & GREED INDEX -->
-      <div class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col">
+      <div id="fng-card" class="lg:col-span-3 holo-card rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col">
         <div class="flex items-center justify-between w-full">
           <div class="section-title">FEAR &amp; GREED INDEX</div>
           <span id="fng-freshness" class="text-[10px] text-[#00ff9f]/60 mono"></span>
@@ -580,7 +615,7 @@
       </div>
 
       <!-- SAYLOR'S WAR CHEST -->
-      <div id="saylor-card" class="lg:col-span-4 holo-card rounded-2xl p-3 sm:p-4 lg:p-6 flex flex-col text-sm sm:text-base">
+      <div id="saylor-card" class="btc-only lg:col-span-4 holo-card rounded-2xl p-3 sm:p-4 lg:p-6 flex flex-col text-sm sm:text-base">
         <div class="flex items-center justify-between">
           <div>
             <div class="section-title">SAYLOR'S WAR CHEST</div>
@@ -679,7 +714,7 @@
     </div>
 
     <!-- NETWORK STATS (moved beneath chart per user request) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="btc-only grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="holo-card rounded-2xl p-6 hover:border-[#00f9ff]/40 transition">
         <div class="flex justify-between items-start">
           <div class="section-title">CURRENT HASH RATE</div>
@@ -720,7 +755,7 @@
     </div>
 
     <!-- SAYLOR RECENT PURCHASES -->
-    <div class="holo-card rounded-2xl p-7">
+    <div class="btc-only holo-card rounded-2xl p-7">
       <div class="flex justify-between items-center mb-4">
         <div class="section-title">RECENT ACQUISITIONS — STRATEGY</div>
         <div class="text-[10px] text-white/40">FROM PUBLIC FILINGS</div>
@@ -771,7 +806,8 @@
 
     // Tailwind config
     function initTailwind() {
-      document.documentElement.style.setProperty('--cyan', '#00f9ff');
+      // --cyan/--magenta are now derived from --accent-rgb/--accent2-rgb in :root (theme-aware),
+      // so we intentionally do NOT pin --cyan here — that would defeat BTC/ETH recoloring.
     }
     initTailwind();
 
@@ -796,7 +832,8 @@
         chartData: null,
         saylor: { btc: 843706, avgCost: 75700 },
         lastSync: null,
-        isSimMode: false
+        isSimMode: false,
+        asset: 'BTC'   // active asset (BTC default); toggled by setAsset()
       };
 
       function dispatchUpdate(type, payload) {
@@ -810,57 +847,45 @@
       // =====================================================
 
       // --- DATA CONSTANTS & PROVIDERS ---
+      // Network/F&G endpoints are Bitcoin-only and asset-independent.
+      // (API.chart removed — chart sources are now built per-asset by buildChartProviders.)
       const API = {
         fearGreed: 'https://api.alternative.me/fng/',
         blockHeight: 'https://mempool.space/api/blocks/tip/height',
-        hashrate: 'https://mempool.space/api/v1/mining/hashrate/1m',
-        chart: 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily'
+        hashrate: 'https://mempool.space/api/v1/mining/hashrate/1m'
       };
 
-      // Multiple reliable price sources with automatic fallback
-      const PRICE_PROVIDERS = [
-        {
-          name: 'Binance',
-          url: 'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT',
-          parse: (d) => ({
-            usd: parseFloat(d.lastPrice),
-            usd_24h_change: parseFloat(d.priceChangePercent)
-          })
-        },
-        {
-          name: 'CoinCap',
-          url: 'https://api.coincap.io/v2/assets/bitcoin',
-          parse: (d) => ({
-            usd: parseFloat(d.data.priceUsd),
-            usd_24h_change: parseFloat(d.data.changePercent24Hr)
-          })
-        },
-        {
-          name: 'CryptoCompare',
-          url: 'https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD',
-          parse: (d) => ({
-            usd: d.USD,
-            usd_24h_change: undefined   // price only, keep previous change
-          })
-        }
-      ];
+      // Per-asset config: labels, provider symbols/ids, and y-axis tick formatting.
+      const ASSETS = {
+        BTC: { label:'BTC', chartLabel:'BTC Price (USD)', subtitle:'BITCOIN DASHBOARD',  coingeckoId:'bitcoin',  binanceSymbol:'BTCUSDT', coincapId:'bitcoin',  ccFsym:'BTC',
+               yTickFormat: v => '$' + (v/1000) + 'k' },
+        ETH: { label:'ETH', chartLabel:'ETH Price (USD)', subtitle:'ETHEREUM DASHBOARD', coingeckoId:'ethereum', binanceSymbol:'ETHUSDT', coincapId:'ethereum', ccFsym:'ETH',
+               yTickFormat: v => '$' + v.toLocaleString('en-US') },
+      };
+
+      // Read a live theme accent color (follows body[data-asset]) as an rgb() string.
+      function themeRgb(which, alpha=1){
+        const v = getComputedStyle(document.body).getPropertyValue(which==='2'?'--accent2-rgb':'--accent-rgb').trim();
+        return `rgb(${v} / ${alpha})`;
+      }
+
+      // Multiple reliable price sources with automatic fallback (templated per active asset)
+      function buildPriceProviders(a){ return [
+        { name:'Binance', url:`https://api.binance.com/api/v3/ticker/24hr?symbol=${a.binanceSymbol}`,
+          parse:d=>({usd:parseFloat(d.lastPrice), usd_24h_change:parseFloat(d.priceChangePercent)}) },
+        { name:'CoinCap', url:`https://api.coincap.io/v2/assets/${a.coincapId}`,
+          parse:d=>({usd:parseFloat(d.data.priceUsd), usd_24h_change:parseFloat(d.data.changePercent24Hr)}) },
+        { name:'CryptoCompare', url:`https://min-api.cryptocompare.com/data/price?fsym=${a.ccFsym}&tsyms=USD`,
+          parse:d=>({usd:d.USD, usd_24h_change:undefined}) },
+      ]; }
 
       // Chart data providers (fallback for when CoinGecko is rate-limited or blocked)
-      const CHART_PROVIDERS = [
-        {
-          name: 'CoinGecko',
-          url: 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily',
-          parse: (d) => d.prices || []
-        },
-        {
-          name: 'CoinCap',
-          url: 'https://api.coincap.io/v2/assets/bitcoin/history?interval=d1',
-          parse: (d) => {
-            const arr = (d.data || []).slice(-30); // last ~30 days
-            return arr.map(item => [item.time, parseFloat(item.priceUsd)]);
-          }
-        }
-      ];
+      function buildChartProviders(a){ return [
+        { name:'CoinGecko', url:`https://api.coingecko.com/api/v3/coins/${a.coingeckoId}/market_chart?vs_currency=usd&days=30&interval=daily`,
+          parse:d=>d.prices||[] },
+        { name:'CoinCap', url:`https://api.coincap.io/v2/assets/${a.coincapId}/history?interval=d1`,
+          parse:d=>{ const arr=(d.data||[]).slice(-30); return arr.map(i=>[i.time, parseFloat(i.priceUsd)]); } },
+      ]; }
 
       let chartInstance = null;
       // Recent acquisitions from public 8-K filings via strategy.com (as of early June 2026)
@@ -1224,7 +1249,7 @@
         let providerName = null;
 
         // Try providers in order until one succeeds (major improvement in reliability)
-        for (const provider of PRICE_PROVIDERS) {
+        for (const provider of buildPriceProviders(ASSETS[window.DASH.asset])) {
           try {
             const res = await fetchWithTimeout(provider.url, 8000);
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1466,7 +1491,7 @@
         let providerName = null;
 
         // Try multiple chart sources (CoinGecko often flakes in production)
-        for (const provider of CHART_PROVIDERS) {
+        for (const provider of buildChartProviders(ASSETS[window.DASH.asset])) {
           try {
             const res = await fetchWithTimeout(provider.url, 10000);
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1496,21 +1521,23 @@
         const ctx = document.getElementById('price-chart');
         if (!ctx) return;
 
+        const cfg = ASSETS[window.DASH.asset];
+
         chartInstance = new Chart(ctx, {
           type: 'line',
           data: {
             labels: prices.map(p => new Date(p[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
             datasets: [{
-              label: 'BTC Price (USD)',
+              label: cfg.chartLabel,
               data: prices.map(p => p[1]),
-              borderColor: '#00f9ff',
+              borderColor: themeRgb('1'),
               borderWidth: 2.5,
               tension: 0.35,
               fill: true,
-              backgroundColor: 'rgba(0, 249, 255, 0.08)',
+              backgroundColor: themeRgb('1', 0.08),
               pointRadius: 0,
               pointHoverRadius: 4,
-              pointHoverBackgroundColor: '#ff00aa'
+              pointHoverBackgroundColor: themeRgb('2')
             }]
           },
           options: {
@@ -1520,24 +1547,24 @@
               legend: { display: false },
               tooltip: {
                 backgroundColor: '#0a0a12',
-                borderColor: '#00f9ff',
+                borderColor: themeRgb('1'),
                 borderWidth: 1,
-                titleColor: '#00f9ff',
+                titleColor: themeRgb('1'),
                 bodyColor: '#e0e7ff',
                 displayColors: false
               }
             },
             scales: {
               x: {
-                grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                grid: { color: themeRgb('2', 0.15), lineWidth: 0.5 },
                 ticks: { color: 'rgba(224, 231, 255, 0.6)', font: { size: 10 } }
               },
               y: {
-                grid: { color: 'rgba(255, 0, 170, 0.15)', lineWidth: 0.5 },
+                grid: { color: themeRgb('2', 0.15), lineWidth: 0.5 },
                 ticks: {
                   color: 'rgba(224, 231, 255, 0.6)',
                   font: { size: 10 },
-                  callback: v => '$' + (v / 1000) + 'k'
+                  callback: cfg.yTickFormat
                 }
               }
             },
@@ -1629,6 +1656,34 @@
         if (typeof updateChart === 'function') updateChart();
         console.log('%c[Robustness] Manual recalibrate triggered — backoffs reset + FNG rescheduled', 'color:#ffd700');
       };
+
+      // =====================================================
+      // ASSET TOGGLE (BTC / ETH) — switches data source + theme
+      // =====================================================
+      function updateAssetToggleUI(){
+        document.querySelectorAll('.asset-tab').forEach(b => b.classList.toggle('active', b.dataset.asset === window.DASH.asset));
+      }
+      function setAsset(asset){
+        if(!ASSETS[asset] || asset === window.DASH.asset) return;
+        window.DASH.asset = asset;
+        document.body.setAttribute('data-asset', asset);   // drives all theme/.btc-only/reflow CSS
+        const sub = document.getElementById('dash-subtitle');
+        if (sub) sub.textContent = ASSETS[asset].subtitle;
+        updateAssetToggleUI();
+        updateLivePrice();
+        updateChart();
+      }
+      window.DASH.setAsset = setAsset;
+      document.getElementById('asset-toggle')?.addEventListener('click', e => {
+        const btn = e.target.closest('.asset-tab'); if(btn) setAsset(btn.dataset.asset);
+      });
+
+      // Init: reflect the default asset on <body> + toggle UI immediately (synchronous,
+      // i.e. BEFORE the +400ms boot that first calls updateLivePrice()/updateChart()).
+      document.body.setAttribute('data-asset', window.DASH.asset);
+      const _sub = document.getElementById('dash-subtitle');
+      if (_sub) _sub.textContent = ASSETS[window.DASH.asset].subtitle;
+      updateAssetToggleUI();
 
       // =====================================================
       // LIGHTWEIGHT DEBUG MODE (?debug=1)
@@ -1983,7 +2038,8 @@
         const { type, payload } = e.detail;
         if (type === 'price' && payload) {
           if (priceEl) priceEl.textContent = '$' + payload.price.toLocaleString('en-US', { minimumFractionDigits: 2 });
-          if (satsEl && payload.sats) satsEl.textContent = payload.sats.toLocaleString('en-US') + ' sats';
+          if (window.DASH.asset === 'BTC' && satsEl && payload.sats) { satsEl.textContent = payload.sats.toLocaleString('en-US') + ' sats'; satsEl.style.display = ''; }
+          else if (satsEl) { satsEl.style.display = 'none'; }
           if (payload.prevPrice != null && payload.price != null) {
             flashPrice(payload.price > payload.prevPrice);
           }
